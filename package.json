@@ -2,10 +2,10 @@
   "name": "uga-cycle-backend",
   "version": "1.0.0",
   "description": "recycle app backend",
-  "main": "index.js",
-  "scripts": {"start": "nodemon index.js",
+  "main": "index.js", // or "src/index.js" if it's in src folder
+  "scripts": {
+    "start": "node index.js",
     "test": "npm start"
-    
   },
   "repository": {
     "type": "git",
@@ -36,5 +36,8 @@
     "nodemon": "^3.1.7",
     "sharp": "^0.33.5",
     "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": "20.15.1"
   }
 }
