@@ -49,7 +49,7 @@ mongoose
   });
 
 // Models
-const User = require("./models/User");
+const User = require("./models/user");
 const Post = require("./models/post");
 const salesPost = require("./models/sellPost");
 const buyPost = require("./models/buyPost");
