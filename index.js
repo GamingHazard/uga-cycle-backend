@@ -42,6 +42,7 @@ const server = app.listen(port, () => {
 // Create the WebSocket server
 const wss = new ws.Server({ server });
 
+// WebSocket connection handling
 // Inside your WebSocket connection handling
 wss.on("connection", (ws) => {
   console.log("Client connected");
@@ -418,20 +419,21 @@ app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
 // Endpoint to create a new sales post
 app.post("/create-SalePosts", async (req, res) => {
   try {
-    const { content, userId } = req.body;
+    const newPost = new salesPost(req.body);
+    await newPost.save();
 
-    const salepost = new salesPost({ user: userId, content });
-    await salepost.save();
-
+    // Broadcast the new post to all connected clients
+    const postMessage = JSON.stringify(newPost);
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: "NEW_SALES_POST", post: salepost }));
+        client.send(postMessage);
       }
     });
 
-    res.status(200).json({ message: "Sales post saved successfully" });
+    res.status(201).json(newPost);
   } catch (error) {
-    res.status(500).json({ message: "Sales post creation failed" });
+    console.error("Error creating sales post", error);
+    res.status(500).json({ message: "Failed to create sales post" });
   }
 });
 
@@ -453,7 +455,7 @@ app.put("/posts/:postId/:userId/like", async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
     updatedPost.user = post.user;
-
+    io.emit("postUpdated", updatedPost);
     res.json(updatedPost);
   } catch (error) {
     console.error("Error liking post:", error);
@@ -482,7 +484,7 @@ app.put("/posts/:postId/:userId/unlike", async (req, res) => {
     if (!updatedPost) {
       return res.status(404).json({ message: "Post not found" });
     }
-
+    io.emit("postUpdated", updatedPost);
     res.json(updatedPost);
   } catch (error) {
     console.error("Error unliking post:", error);
@@ -538,22 +540,24 @@ app.get("/profile/:userId", async (req, res) => {
   }
 });
 
-app.post("/create-SalePosts", async (req, res) => {
+// Endpoint to create a new post
+app.post("/create-post", async (req, res) => {
   try {
-    const newPost = new salesPost(req.body);
+    const { content, userId } = req.body;
+
+    const newPost = new Post({ user: userId, content });
     await newPost.save();
 
-    // Broadcast the new post to all connected clients
-    const postMessage = JSON.stringify(newPost);
+    io.emit("newPost", newPost);
+
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
-        client.send(postMessage);
+        client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
       }
     });
 
-    res.status(201).json(newPost);
+    res.status(200).json({ message: "Post saved successfully" });
   } catch (error) {
-    console.error("Error creating sales post", error);
-    res.status(500).json({ message: "Failed to create sales post" });
+    res.status(500).json({ message: "Post creation failed" });
   }
 });
