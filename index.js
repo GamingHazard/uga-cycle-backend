@@ -57,6 +57,8 @@ wss.on("connection", (ws) => {
 });
 
 const User = require("./models/user");
+const Post = require("./models/post");
+const salesPost = require("./models/sellPost");
 
 // Endpoint to register a user
 app.post("/register", async (req, res) => {
@@ -404,5 +406,112 @@ app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
   } catch (error) {
     console.error("Error updating user image", error);
     res.status(500).json({ error: "Failed to update user image" });
+  }
+});
+
+// Endpoint to create a new sales post
+app.post("/create-SalePosts", async (req, res) => {
+  try {
+    const { content, userId } = req.body;
+
+    const salepost = new salesPost({ user: userId, content });
+    await salepost.save();
+
+    wss.clients.forEach((client) => {
+      if (client.readyState === ws.OPEN) {
+        client.send(JSON.stringify({ type: "NEW_SALES_POST", post: salepost }));
+      }
+    });
+
+    res.status(200).json({ message: "Sales post saved successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Sales post creation failed" });
+  }
+});
+
+// Endpoint for liking a post
+app.put("/posts/:postId/:userId/like", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const post = await Post.findById(postId).populate("user", "name");
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    updatedPost.user = post.user;
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error("Error liking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while liking the post" });
+  }
+});
+
+// Endpoint to unlike a post
+app.put("/posts/:postId/:userId/unlike", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const post = await Post.findById(postId).populate("user", "name");
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $pull: { likes: userId } },
+      { new: true }
+    );
+
+    updatedPost.user = post.user;
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error("Error unliking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while unliking the post" });
+  }
+});
+
+// Endpoint to get all posts
+app.get("/get-posts", async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate("user", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "An error occurred while getting the posts" });
+  }
+});
+// Endpoint to get all Sale posts
+app.get("/get-SalePosts", async (req, res) => {
+  try {
+    const SalePosts = await salesPost
+      .find()
+      .populate("user", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(SalePosts);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "An error occurred while getting the Sale posts" });
   }
 });
