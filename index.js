@@ -42,13 +42,19 @@ const server = app.listen(port, () => {
 // Create the WebSocket server
 const wss = new ws.Server({ server });
 
-// WebSocket connection handling
+// Inside your WebSocket connection handling
 wss.on("connection", (ws) => {
   console.log("Client connected");
 
   ws.on("message", (message) => {
     console.log("Received:", message);
-    // Handle incoming messages and broadcast them if necessary
+
+    // Broadcast the message to all connected clients
+    wss.clients.forEach((client) => {
+      if (client.readyState === ws.OPEN) {
+        client.send(message);
+      }
+    });
   });
 
   ws.on("close", () => {
@@ -532,22 +538,22 @@ app.get("/profile/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create a new post
-app.post("/create-post", async (req, res) => {
+app.post("/create-SalePosts", async (req, res) => {
   try {
-    const { content, userId } = req.body;
-
-    const newPost = new Post({ user: userId, content });
+    const newPost = new salesPost(req.body);
     await newPost.save();
 
+    // Broadcast the new post to all connected clients
+    const postMessage = JSON.stringify(newPost);
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
+        client.send(postMessage);
       }
     });
 
-    res.status(200).json({ message: "Post saved successfully" });
+    res.status(201).json(newPost);
   } catch (error) {
-    res.status(500).json({ message: "Post creation failed" });
+    console.error("Error creating sales post", error);
+    res.status(500).json({ message: "Failed to create sales post" });
   }
 });
