@@ -531,3 +531,23 @@ app.get("/profile/:userId", async (req, res) => {
     res.status(500).json({ message: "Error while getting the profile" });
   }
 });
+
+// Endpoint to create a new post
+app.post("/create-post", async (req, res) => {
+  try {
+    const { content, userId } = req.body;
+
+    const newPost = new Post({ user: userId, content });
+    await newPost.save();
+
+    wss.clients.forEach((client) => {
+      if (client.readyState === ws.OPEN) {
+        client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
+      }
+    });
+
+    res.status(200).json({ message: "Post saved successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Post creation failed" });
+  }
+});
