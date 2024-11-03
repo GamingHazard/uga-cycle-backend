@@ -43,19 +43,12 @@ const server = app.listen(port, () => {
 const wss = new ws.Server({ server });
 
 // WebSocket connection handling
-// Inside your WebSocket connection handling
 wss.on("connection", (ws) => {
   console.log("Client connected");
 
   ws.on("message", (message) => {
     console.log("Received:", message);
-
-    // Broadcast the message to all connected clients
-    wss.clients.forEach((client) => {
-      if (client.readyState === ws.OPEN) {
-        client.send(message);
-      }
-    });
+    // Handle incoming messages and broadcast them if necessary
   });
 
   ws.on("close", () => {
@@ -257,7 +250,6 @@ app.delete("/deleteUser/:userId", async (req, res) => {
   }
 });
 
-// PATCH endpoint to update user info
 // PATCH endpoint to update user info
 app.patch("/updateUser/:userId", async (req, res) => {
   const { name, email, phone, profilePicture } = req.body;
@@ -546,8 +538,6 @@ app.post("/create-post", async (req, res) => {
 
     const newPost = new Post({ user: userId, content });
     await newPost.save();
-
-    io.emit("newPost", newPost);
 
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
