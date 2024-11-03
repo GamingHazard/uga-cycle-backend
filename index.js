@@ -419,21 +419,20 @@ app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
 // Endpoint to create a new sales post
 app.post("/create-SalePosts", async (req, res) => {
   try {
-    const newPost = new salesPost(req.body);
-    await newPost.save();
+    const { content, userId } = req.body;
 
-    // Broadcast the new post to all connected clients
-    const postMessage = JSON.stringify(newPost);
+    const salepost = new salesPost({ user: userId, content });
+    await salepost.save();
+
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
-        client.send(postMessage);
+        client.send(JSON.stringify({ type: "NEW_SALES_POST", post: salepost }));
       }
     });
 
-    res.status(201).json(newPost);
+    res.status(200).json({ message: "Sales post saved successfully" });
   } catch (error) {
-    console.error("Error creating sales post", error);
-    res.status(500).json({ message: "Failed to create sales post" });
+    res.status(500).json({ message: "Sales post creation failed" });
   }
 });
 
@@ -455,7 +454,7 @@ app.put("/posts/:postId/:userId/like", async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
     updatedPost.user = post.user;
-    io.emit("postUpdated", updatedPost);
+
     res.json(updatedPost);
   } catch (error) {
     console.error("Error liking post:", error);
@@ -484,7 +483,7 @@ app.put("/posts/:postId/:userId/unlike", async (req, res) => {
     if (!updatedPost) {
       return res.status(404).json({ message: "Post not found" });
     }
-    io.emit("postUpdated", updatedPost);
+
     res.json(updatedPost);
   } catch (error) {
     console.error("Error unliking post:", error);
