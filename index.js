@@ -633,3 +633,62 @@ app.get("/notifications/:userId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch notifications" });
   }
 });
+
+// Services
+app.post("/service_regiestration", async (req, res) => {
+  try {
+    const {
+      user,
+      Service_provider_name,
+      fullName,
+      phoneNumber,
+      registrationType,
+      pickupSchedule,
+      region,
+      district,
+    } = req.body;
+
+    // Check if the user is already registered with this service provider
+    const existingRegistration = await Registration.findOne({
+      user,
+      Service_provider_name,
+    });
+
+    if (existingRegistration) {
+      return res.status(400).json({
+        message: "You have already registered with this provider.",
+      });
+    }
+
+    // If no existing registration, create a new one
+    const registration = new Registration({
+      user,
+      Service_provider_name,
+      fullName,
+      phoneNumber,
+      registrationType,
+      pickupSchedule,
+      region,
+      district,
+    });
+
+    await registration.save();
+    res
+      .status(201)
+      .json({ message: "Registration created successfully", registration });
+  } catch (error) {
+    res.status(400).json({ message: "Failed to create registration", error });
+  }
+});
+
+// get services
+app.get("/service_regiestration", async (req, res) => {
+  try {
+    const registrations = await Registration.find().populate("user"); // populate to fetch user details
+    res.status(200).json(registrations);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve registrations", error });
+  }
+});
