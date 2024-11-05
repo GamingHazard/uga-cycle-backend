@@ -1,9 +1,16 @@
 const mongoose = require("mongoose");
 
 const salesPostSchema = new mongoose.Schema({
-  content: { type: String },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-
+  companyName: { type: String, required: true },
+  telNumber: { type: String, required: true },
+  content: { type: String, required: true },
+  items: [
+    {
+      item: { type: String, required: true },
+      price: { type: Number, required: true },
+    },
+  ],
   replies: [
     {
       user: {

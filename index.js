@@ -13,7 +13,31 @@ const app = express();
 const port = 3000;
 const cors = require("cors");
 app.use(cors());
+const WebSocket = require("ws");
+const wsserver = require("http").createServer();
+const newwss = new WebSocket.Server({ wsserver });
 
+newwss.on("connection", (newws) => {
+  console.log("New client connected");
+
+  newws.on("message", (message) => {
+    console.log("received:", message);
+    // Broadcast to all clients
+    newwss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
+
+  ws.on("close", () => console.log("Client disconnected"));
+});
+// / Start the HTTP server on a port, for example 8080
+wsserver.listen(8080, () =>
+  console.log(
+    "WebSocket server is listening on ws://uga-cycle-backend-1.onrender.com"
+  )
+);
 // Set up multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -33,28 +57,6 @@ mongoose
   .catch((err) => {
     console.log("Error Connecting to MongoDB");
   });
-
-// Create the HTTP server
-const server = app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-// Create the WebSocket server
-const wss = new ws.Server({ server });
-
-// WebSocket connection handling
-wss.on("connection", (ws) => {
-  console.log("Client connected");
-
-  ws.on("message", (message) => {
-    console.log("Received:", message);
-    // Handle incoming messages and broadcast them if necessary
-  });
-
-  ws.on("close", () => {
-    console.log("Client disconnected");
-  });
-});
 
 const User = require("./models/user");
 const Post = require("./models/post");
@@ -228,17 +230,29 @@ app.get("/profile/:userId", authenticateToken, async (req, res) => {
 });
 
 // DELETE endpoint to delete user account
-app.delete("/deleteUser/:userId", async (req, res) => {
+app.delete("/deleteUser", authenticateUser, async (req, res) => {
   try {
-    const userId = req.params.userId; // Get userId from URL
-    const deleteUser = await User.findByIdAndDelete(userId);
+    const userId = req.user.id; // Get userId from authenticated user context
+    const { password } = req.body; // Get password from request body
 
-    if (!deleteUser) {
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
       return res
         .status(404)
         .json({ status: "fail", message: "User not found" });
     }
 
+    // Verify the password (ensure you have a method to compare passwords)
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res
+        .status(401)
+        .json({ status: "fail", message: "Incorrect password" });
+    }
+
+    // If password is correct, delete the user
+    await User.findByIdAndDelete(userId);
     res
       .status(200)
       .json({ status: "success", message: "Account deleted successfully" });
@@ -310,32 +324,41 @@ app.post("/forgot-password", async (req, res) => {
   try {
     const { identifier } = req.body; // Accept either email or phone number
 
-    // Check if identifier is a valid email or phone number
+    // Find user by email or phone number
     const user = await User.findOne({
-      $or: [{ email: identifier }, { phoneNumber: identifier }], // Search by email or phone number
+      $or: [{ email: identifier }, { phoneNumber: identifier }],
     });
 
     if (!user) {
-      return res.status(404).json({
-        message: "No account found with this email address or phone number.",
+      // Generic message to avoid account enumeration
+      return res.status(200).json({
+        message:
+          "If an account exists, a reset link will be sent to the provided contact.",
       });
     }
 
-    // Generate a reset token and expiration
+    // Generate a secure token
     const token = crypto.randomBytes(20).toString("hex");
     user.resetPasswordToken = token;
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
 
     await user.save();
 
+    // Construct reset URL
+    const resetUrl = `https://auth-db-23ly.onrender.com/reset-password/${token}`;
+
     // Send email with the token if email is provided
     if (user.email) {
-      const resetUrl = `https://auth-db-23ly.onrender.com/reset-password/${token}`;
       await sendResetPasswordEmail(user.email, resetUrl);
     }
 
-    // Respond with the token
-    res.status(200).json({ token });
+    // You may also handle SMS sending here if using phone numbers
+
+    // Respond with a generic success message
+    res.status(200).json({
+      message:
+        "If an account exists, a reset link will be sent to the provided contact.",
+    });
   } catch (error) {
     console.error("Error in /forgot-password", error);
     res.status(500).json({ message: "Server error" });
@@ -343,40 +366,61 @@ app.post("/forgot-password", async (req, res) => {
 });
 
 // Endpoint to reset password
-app.patch("/reset-password/:token", async (req, res) => {
+app.patch("/reset-password/:token?", async (req, res) => {
   try {
-    const { token } = req.params;
-    const { password } = req.body;
+    const { token: resetToken } = req.params; // Reset token from URL (optional)
+    const { password, userToken } = req.body; // New password and user token from body
 
-    // Find user with the provided token and check if it is still valid
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
+    let user;
 
-    if (!user) {
-      return res
-        .status(400)
-        .json({ message: "Password reset token is invalid or has expired." });
+    // Check if userToken is provided
+    if (userToken) {
+      try {
+        // Decode and verify the user token, extracting user ID from it
+        const decoded = jwt.verify(userToken, process.env.JWT_SECRET); // Replace JWT_SECRET with your JWT secret key
+        user = await User.findById(decoded.id); // Find user by ID in the token payload
+        if (!user) {
+          return res.status(404).json({ message: "User not found." });
+        }
+      } catch (err) {
+        return res.status(401).json({ message: "Invalid user token." });
+      }
+    } else if (resetToken) {
+      // If no user token, fallback to the reset token
+      user = await User.findOne({
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: { $gt: Date.now() }, // Check if token is still valid
+      });
+      if (!user) {
+        return res.status(400).json({
+          message: "Password reset token is invalid or has expired.",
+        });
+      }
+    } else {
+      // If neither token is provided
+      return res.status(400).json({ message: "No token provided." });
     }
 
-    // Update the user's password and clear the reset token
-    user.password = password; // Note: Storing plaintext passwords is not secure
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10); // Hash the password with a salt round of 10
+    user.password = hashedPassword; // Update the user's password
 
-    // Save the updated user
-    await user.save();
+    // Clear reset token fields if they exist
+    if (resetToken) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+    }
+
+    await user.save(); // Save the updated user
 
     res
       .status(200)
       .json({ message: "Password has been updated successfully." });
   } catch (error) {
-    console.error("Error in /reset-password/:token", error);
+    console.error("Error in /reset-password endpoint", error);
     res.status(500).json({ message: "Server error" });
   }
 });
-
 // Endpoint to upload images
 app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
   try {
@@ -411,11 +455,20 @@ app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
 // Endpoint to create a new sales post
 app.post("/create-SalePosts", async (req, res) => {
   try {
-    const { content, userId } = req.body;
+    const { companyName, telNumber, content, items, userId } = req.body;
 
-    const salepost = new salesPost({ user: userId, content });
+    // Create a new sales post with additional fields
+    const salepost = new salesPost({
+      user: userId,
+      companyName,
+      telNumber,
+      content,
+      items, // Assuming items is an array of objects with item name and price
+    });
+
     await salepost.save();
 
+    // Broadcast the new sales post to all WebSocket clients
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
         client.send(JSON.stringify({ type: "NEW_SALES_POST", post: salepost }));
@@ -424,6 +477,7 @@ app.post("/create-SalePosts", async (req, res) => {
 
     res.status(200).json({ message: "Sales post saved successfully" });
   } catch (error) {
+    console.error("Error creating sales post:", error);
     res.status(500).json({ message: "Sales post creation failed" });
   }
 });
@@ -539,6 +593,7 @@ app.post("/create-post", async (req, res) => {
     const newPost = new Post({ user: userId, content });
     await newPost.save();
 
+    // Notify all connected clients of the new post
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
         client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
@@ -548,5 +603,14 @@ app.post("/create-post", async (req, res) => {
     res.status(200).json({ message: "Post saved successfully" });
   } catch (error) {
     res.status(500).json({ message: "Post creation failed" });
+  }
+});
+// Assuming you have a Notification model
+app.get("/notifications/:userId", async (req, res) => {
+  try {
+    const notifications = await Notification.find({ user: req.params.userId });
+    res.status(200).json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch notifications" });
   }
 });
