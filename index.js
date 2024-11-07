@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt"); // Import bcrypt
 const nodemailer = require("nodemailer");
-const ws = require("ws");
+const WebSocket = require("ws");
 require("dotenv").config();
 const multer = require("multer");
 const cloudinary = require("./cloudinary");
@@ -12,32 +12,36 @@ const streamifier = require("streamifier");
 const app = express();
 const port = 3000;
 const cors = require("cors");
-app.use(cors());
-const WebSocket = require("ws");
-const wsserver = require("http").createServer();
-const newwss = new WebSocket.Server({ wsserver });
+const http = require("http");
+const wsProtocol = process.env.NODE_ENV === "production" ? "wss" : "ws";
+const wsPort = process.env.PORT || 8080; // Use your app's port or default to 8080
+const wsUrl = `${wsProtocol}://uga-cycle-backend-1.onrender.com:${wsPort}`;
+const server = http.createServer(app); // Define the HTTP server instance
 
-newwss.on("connection", (newws) => {
-  console.log("New client connected");
+const wss = new WebSocket.Server({ server });
 
-  newws.on("message", (message) => {
-    console.log("received:", message);
-    // Broadcast to all clients
-    newwss.clients.forEach((client) => {
+wss.on("connection", (ws) => {
+  console.log("Client connected");
+
+  ws.on("message", (message) => {
+    console.log(`Received: ${message}`);
+    // You can broadcast the message to all connected clients
+    wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(message);
       }
     });
   });
 
-  ws.on("close", () => console.log("Client disconnected"));
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
 });
-// / Start the HTTP server on a port, for example 8080
-wsserver.listen(8080, () =>
-  console.log(
-    "WebSocket server is listening on ws://uga-cycle-backend-1.onrender.com"
-  )
-);
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
 // Set up multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -208,6 +212,21 @@ const authenticateToken = (req, res, next) => {
     next();
   } catch (error) {
     res.status(400).json({ message: "Invalid token" });
+  }
+};
+const authenticateUser = (req, res, next) => {
+  // Your authentication logic goes here
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  // Assuming JWT for token verification
+  try {
+    const decoded = jwt.verify(token, "your_secret_key");
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 };
 
