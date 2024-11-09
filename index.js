@@ -490,7 +490,7 @@ app.get("/get-SalePosts", async (req, res) => {
   try {
     const SalePosts = await salesPost
       .find()
-      .populate("user", "name  profilePicture")
+      .populate("user", "name profilePicture")
       .sort({ createdAt: -1 });
 
     res.status(200).json(SalePosts);
