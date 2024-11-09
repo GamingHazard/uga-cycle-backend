@@ -343,64 +343,69 @@ app.post("/forgot-password", async (req, res) => {
   try {
     const { identifier } = req.body; // Accept either email or phone number
 
+    // Check if identifier is a valid email or phone number
     const user = await User.findOne({
-      $or: [{ email: identifier }, { phoneNumber: identifier }],
+      $or: [{ email: identifier }, { phoneNumber: identifier }], // Search by email or phone number
     });
 
     if (!user) {
-      return res.status(200).json({
-        message:
-          "If an account exists, a reset link will be sent to the provided contact.",
+      return res.status(404).json({
+        message: "No account found with this email address or phone number.",
       });
     }
 
-    // Generate a secure token and set expiration time
+    // Generate a reset token and expiration
     const token = crypto.randomBytes(20).toString("hex");
     user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
 
     await user.save();
 
-    // Construct reset URL (you can include the token in the response directly)
-    const resetUrl = `https://uga-cycle-backend-1.onrender.com/reset-password/${token}`;
+    // Send email with the token if email is provided
+    if (user.email) {
+      const resetUrl = `https://uga-cycle-backend-1.onrender.com/reset-password/${token}`;
+      await sendResetPasswordEmail(user.email, resetUrl);
+    }
 
-    // Respond with the token directly (no email needed)
-    res.status(200).json({
-      message:
-        "If an account exists, a reset link will be sent to the provided contact.",
-      resetUrl, // You can also send the reset URL directly here
-    });
+    // Respond with the token
+    res.status(200).json({ token });
   } catch (error) {
     console.error("Error in /forgot-password", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Endpoint to reset the password (using PATCH)
-app.patch("/reset-password", async (req, res) => {
+// Endpoint to reset password
+app.patch("/reset-password/:token", async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token } = req.params;
+    const { password } = req.body;
 
-    // Find the user by the reset password token and check if the token has expired
+    // Find user with the provided token and check if it is still valid
     const user = await User.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }, // Token must not be expired
+      resetPasswordExpires: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token." });
+      return res
+        .status(400)
+        .json({ message: "Password reset token is invalid or has expired." });
     }
 
-    // Hash the new password and update the user's password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    user.resetPasswordToken = undefined; // Clear the token
-    user.resetPasswordExpires = undefined; // Clear the token expiry time
+    // Update the user's password and clear the reset token
+    user.password = password; // Note: Storing plaintext passwords is not secure
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
 
+    // Save the updated user
     await user.save();
-    res.status(200).json({ message: "Password reset successfully." });
+
+    res
+      .status(200)
+      .json({ message: "Password has been updated successfully." });
   } catch (error) {
-    console.error("Error in /reset-password", error);
+    console.error("Error in /reset-password/:token", error);
     res.status(500).json({ message: "Server error" });
   }
 });
