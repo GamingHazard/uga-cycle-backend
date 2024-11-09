@@ -343,40 +343,32 @@ app.post("/forgot-password", async (req, res) => {
   try {
     const { identifier } = req.body; // Accept either email or phone number
 
-    // Find user by email or phone number
     const user = await User.findOne({
       $or: [{ email: identifier }, { phoneNumber: identifier }],
     });
 
     if (!user) {
-      // Generic message to avoid account enumeration
       return res.status(200).json({
         message:
           "If an account exists, a reset link will be sent to the provided contact.",
       });
     }
 
-    // Generate a secure token
+    // Generate a secure token and set expiration time
     const token = crypto.randomBytes(20).toString("hex");
     user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
 
     await user.save();
 
-    // Construct reset URL
-    const resetUrl = `https://auth-db-23ly.onrender.com/reset-password/${token}`;
+    // Construct reset URL (you can include the token in the response directly)
+    const resetUrl = `https://uga-cycle-backend-1.onrender.com/reset-password/${token}`;
 
-    // Send email with the token if email is provided
-    if (user.email) {
-      await sendResetPasswordEmail(user.email, resetUrl);
-    }
-
-    // You may also handle SMS sending here if using phone numbers
-
-    // Respond with a generic success message
+    // Respond with the token directly (no email needed)
     res.status(200).json({
       message:
         "If an account exists, a reset link will be sent to the provided contact.",
+      resetUrl, // You can also send the reset URL directly here
     });
   } catch (error) {
     console.error("Error in /forgot-password", error);
@@ -384,62 +376,35 @@ app.post("/forgot-password", async (req, res) => {
   }
 });
 
-// Endpoint to reset password
-app.patch("/reset-password/:token?", async (req, res) => {
+// Endpoint to reset the password (using PATCH)
+app.patch("/reset-password", async (req, res) => {
   try {
-    const { token: resetToken } = req.params; // Reset token from URL (optional)
-    const { password, userToken } = req.body; // New password and user token from body
+    const { token, newPassword } = req.body;
 
-    let user;
+    // Find the user by the reset password token and check if the token has expired
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }, // Token must not be expired
+    });
 
-    // Check if userToken is provided
-    if (userToken) {
-      try {
-        // Decode and verify the user token, extracting user ID from it
-        const decoded = jwt.verify(userToken, process.env.JWT_SECRET); // Replace JWT_SECRET with your JWT secret key
-        user = await User.findById(decoded.id); // Find user by ID in the token payload
-        if (!user) {
-          return res.status(404).json({ message: "User not found." });
-        }
-      } catch (err) {
-        return res.status(401).json({ message: "Invalid user token." });
-      }
-    } else if (resetToken) {
-      // If no user token, fallback to the reset token
-      user = await User.findOne({
-        resetPasswordToken: resetToken,
-        resetPasswordExpires: { $gt: Date.now() }, // Check if token is still valid
-      });
-      if (!user) {
-        return res.status(400).json({
-          message: "Password reset token is invalid or has expired.",
-        });
-      }
-    } else {
-      // If neither token is provided
-      return res.status(400).json({ message: "No token provided." });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token." });
     }
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash the password with a salt round of 10
-    user.password = hashedPassword; // Update the user's password
+    // Hash the new password and update the user's password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined; // Clear the token
+    user.resetPasswordExpires = undefined; // Clear the token expiry time
 
-    // Clear reset token fields if they exist
-    if (resetToken) {
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-    }
-
-    await user.save(); // Save the updated user
-
-    res
-      .status(200)
-      .json({ message: "Password has been updated successfully." });
+    await user.save();
+    res.status(200).json({ message: "Password reset successfully." });
   } catch (error) {
-    console.error("Error in /reset-password endpoint", error);
+    console.error("Error in /reset-password", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 // Endpoint to upload images
 app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
   try {

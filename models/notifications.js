@@ -6,7 +6,7 @@ let expo = new Expo();
 
 const sendPushNotification = async (token, message) => {
   // Create the messages to send
-  let messages = [];
+  let messages = [{ title: "Post" }, { body: "You have new posts " }];
 
   if (!Expo.isExpoPushToken(token)) {
     console.error(`Invalid Expo push token: ${token}`);
