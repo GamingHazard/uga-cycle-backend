@@ -42,9 +42,6 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
 });
-// Set up multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -61,6 +58,13 @@ mongoose
   .catch((err) => {
     console.log("Error Connecting to MongoDB");
   });
+
+// Configure multer to accept image files
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+}); // Limit file size to 5MB
 
 const User = require("./models/user");
 const Post = require("./models/post");
@@ -339,6 +343,42 @@ app.patch("/updateUser/:userId", async (req, res) => {
   }
 });
 
+// PATCH endpoint to update user profile picture
+app.patch("/updateProfilePicture/:userId", async (req, res) => {
+  const { profilePicture } = req.body; // Only the profile picture needs to be updated
+  const userId = req.params.userId;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    // Validate if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // If profilePicture is not provided, return error
+    if (!profilePicture) {
+      return res.status(400).json({ error: "Profile picture is required" });
+    }
+
+    // Update the user's profile picture
+    user.profilePicture = profilePicture;
+
+    // Save the updated user object
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      message: "Profile picture updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint to request a password reset
 app.post("/forgot-password", async (req, res) => {
   try {
@@ -408,37 +448,6 @@ app.patch("/reset-password/:token", async (req, res) => {
   } catch (error) {
     console.error("Error in /reset-password/:token", error);
     res.status(500).json({ message: "Server error" });
-  }
-});
-
-// Endpoint to upload images
-app.patch("/profile-images/:userId", authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { imageUrl } = req.body;
-
-    // Validate the user ID
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
-
-    // Update the user profile with the new image URL
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { profilePicture: imageUrl },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res
-      .status(200)
-      .json({ message: "User image updated successfully", user: updatedUser });
-  } catch (error) {
-    console.error("Error updating user image", error);
-    res.status(500).json({ error: "Failed to update user image" });
   }
 });
 
