@@ -343,79 +343,6 @@ app.patch("/updateUser/:userId", async (req, res) => {
   }
 });
 
-// PATCH endpoint to update user profile picture
-app.patch("/updateProfilePicture/:userId", async (req, res) => {
-  const { profilePicture } = req.body; // Only the profile picture needs to be updated
-  const userId = req.params.userId;
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: "Invalid user ID" });
-  }
-
-  try {
-    // Validate if the user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // If profilePicture is not provided, return error
-    if (!profilePicture) {
-      return res.status(400).json({ error: "Profile picture is required" });
-    }
-
-    // Update the user's profile picture
-    user.profilePicture = profilePicture;
-
-    // Save the updated user object
-    const updatedUser = await user.save();
-
-    res.status(200).json({
-      message: "Profile picture updated successfully",
-      user: updatedUser,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Endpoint to request a password reset
-app.post("/forgot-password", async (req, res) => {
-  try {
-    const { identifier } = req.body; // Accept either email or phone number
-
-    // Check if identifier is a valid email or phone number
-    const user = await User.findOne({
-      $or: [{ email: identifier }, { phoneNumber: identifier }], // Search by email or phone number
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        message: "No account found with this email address or phone number.",
-      });
-    }
-
-    // Generate a reset token and expiration
-    const token = crypto.randomBytes(20).toString("hex");
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-
-    await user.save();
-
-    // Send email with the token if email is provided
-    if (user.email) {
-      const resetUrl = `https://uga-cycle-backend-1.onrender.com/reset-password/${token}`;
-      await sendResetPasswordEmail(user.email, resetUrl);
-    }
-
-    // Respond with the token
-    res.status(200).json({ token });
-  } catch (error) {
-    console.error("Error in /forgot-password", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 // Endpoint to reset password
 app.patch("/reset-password/:token", async (req, res) => {
   try {
@@ -542,7 +469,7 @@ app.put("/posts/:postId/:userId/unlike", async (req, res) => {
 app.get("/get-posts", async (req, res) => {
   try {
     const posts = await Post.find()
-      .populate("user", "name")
+      .populate("user", "name", "profilePicture")
       .sort({ createdAt: -1 });
 
     res.status(200).json(posts);
