@@ -414,7 +414,10 @@ app.put("/posts/:postId/:userId/like", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const post = await Post.findById(postId).populate("user", "name");
+    const post = await Post.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
 
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
@@ -442,7 +445,10 @@ app.put("/posts/:postId/:userId/unlike", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const post = await Post.findById(postId).populate("user", "name");
+    const post = await Post.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
 
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
@@ -625,7 +631,7 @@ app.post("/create-tip", async (req, res) => {
 app.get("/get-tips", async (req, res) => {
   try {
     const posts = await Tips.find()
-      .populate("user", "name")
+      .populate("user", "name  profilePicture")
       .sort({ createdAt: -1 });
 
     res.status(200).json(posts);
@@ -642,7 +648,10 @@ app.put("/tips/:postId/:userId/like", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const post = await Tips.findById(postId).populate("user", "name");
+    const post = await Tips.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
 
     const updatedPost = await Tips.findByIdAndUpdate(
       postId,
@@ -670,7 +679,10 @@ app.put("/tips/:postId/:userId/unlike", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const post = await Tips.findById(postId).populate("user", "name");
+    const post = await Tips.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
 
     const updatedPost = await Tips.findByIdAndUpdate(
       postId,
