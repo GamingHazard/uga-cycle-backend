@@ -699,3 +699,60 @@ app.get("/get-tips", async (req, res) => {
       .json({ message: "An error occurred while getting the posts" });
   }
 });
+
+// Endpoint for liking a post
+app.put("/tips/:postId/:userId/like", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const post = await Post.findById(postId).populate("user", "name");
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    updatedPost.user = post.user;
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error("Error liking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while liking the post" });
+  }
+});
+
+// Endpoint to unlike a post
+app.put("/tips/:postId/:userId/unlike", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const post = await Post.findById(postId).populate("user", "name");
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $pull: { likes: userId } },
+      { new: true }
+    );
+
+    updatedPost.user = post.user;
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error("Error unliking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while unliking the post" });
+  }
+});
