@@ -700,7 +700,7 @@ app.get("/get-tips", async (req, res) => {
   }
 });
 
-// Endpoint for liking a post
+// Endpoint for liking a tip
 app.put("/tips/:postId/:userId/like", async (req, res) => {
   const postId = req.params.postId;
   const userId = req.params.userId;
@@ -728,7 +728,7 @@ app.put("/tips/:postId/:userId/like", async (req, res) => {
   }
 });
 
-// Endpoint to unlike a post
+// Endpoint to unlike a tip
 app.put("/tips/:postId/:userId/unlike", async (req, res) => {
   const postId = req.params.postId;
   const userId = req.params.userId;
