@@ -64,6 +64,7 @@ mongoose
 
 const User = require("./models/user");
 const Post = require("./models/post");
+const Tips = require("./models/tip");
 const salesPost = require("./models/sellPost");
 
 // Endpoint to register a user
@@ -660,5 +661,41 @@ app.get("/service_regiestration", async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to retrieve registrations", error });
+  }
+});
+
+// Endpoint to create a new tip
+app.post("/create-tip", async (req, res) => {
+  try {
+    const { content, userId } = req.body;
+
+    const newPost = new Tips({ user: userId, content });
+    await newPost.save();
+
+    // Notify all connected clients of the new post
+    wss.clients.forEach((client) => {
+      if (client.readyState === ws.OPEN) {
+        client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
+      }
+    });
+
+    res.status(200).json({ message: "Post saved successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Post creation failed" });
+  }
+});
+
+// Endpoint to get all tips
+app.get("/get-tips", async (req, res) => {
+  try {
+    const posts = await Tips.find()
+      .populate("user", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "An error occurred while getting the posts" });
   }
 });
