@@ -706,9 +706,9 @@ app.put("/tips/:postId/:userId/like", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const post = await Post.findById(postId).populate("user", "name");
+    const post = await Tips.findById(postId).populate("user", "name");
 
-    const updatedPost = await Post.findByIdAndUpdate(
+    const updatedPost = await Tips.findByIdAndUpdate(
       postId,
       { $addToSet: { likes: userId } },
       { new: true }
@@ -734,9 +734,9 @@ app.put("/tips/:postId/:userId/unlike", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const post = await Post.findById(postId).populate("user", "name");
+    const post = await Tips.findById(postId).populate("user", "name");
 
-    const updatedPost = await Post.findByIdAndUpdate(
+    const updatedPost = await Tips.findByIdAndUpdate(
       postId,
       { $pull: { likes: userId } },
       { new: true }
