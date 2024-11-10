@@ -1,22 +1,20 @@
 const mongoose = require("mongoose");
 
-const registrationSchema = new mongoose.Schema(
-  {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    Service_provider_name: { type: String, required: true },
-    fullName: { type: String, required: true },
-    phoneNumber: { type: String, required: true },
-    registrationType: { type: String, required: true },
-    pickupSchedule: { type: String, required: true },
-    region: { type: String, required: true },
-    district: { type: String, required: true },
-    Registered_on: {
-      type: Date,
-      default: Date.now,
-    },
+const ServiceSchema = new mongoose.Schema({
+  companyName: { type: String, required: true }, // Full name of the user
+  fullName: { type: String, required: true }, // Full name of the user
+  phoneNumber: { type: String, required: true }, // User's phone number
+  region: { type: String, required: true }, // User's selected region
+  district: { type: String, required: true }, // User's selected district
+  registrationType: { type: String, required: true }, // User's selected registration type
+  pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
+  createdAt: {
+    type: Date,
+    default: Date.now, // Timestamp of when the service was created
   },
-  { timestamps: true }
-);
+});
 
-const Registration = mongoose.model("Registration", registrationSchema);
-module.exports = Registration;
+const Services = mongoose.model("Service", ServiceSchema); // Change model name to 'Service'
+
+module.exports = Services;

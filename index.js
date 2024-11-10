@@ -69,6 +69,7 @@ const upload = multer({
 const User = require("./models/user");
 const Post = require("./models/post");
 const Tips = require("./models/tip");
+const Services = require("./models/services");
 const salesPost = require("./models/sellPost");
 
 // Endpoint to register a user
@@ -496,20 +497,6 @@ app.put("/posts/:postId/:userId/unlike", async (req, res) => {
   }
 });
 
-// Endpoint to get all posts
-app.get("/get-posts", async (req, res) => {
-  try {
-    const posts = await Post.find()
-      .populate("user", "name  profilePicture")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json(posts);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "An error occurred while getting the posts" });
-  }
-});
 // Endpoint to get all Sale posts
 app.get("/get-SalePosts", async (req, res) => {
   try {
@@ -572,62 +559,74 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Services
-app.post("/service_regiestration", async (req, res) => {
+// Endpoint to register a service
+app.post("/service_registration", async (req, res) => {
   try {
+    // Extract the required fields from the request body
     const {
-      user,
-      Service_provider_name,
+      companyName,
       fullName,
       phoneNumber,
-      registrationType,
-      pickupSchedule,
       region,
       district,
+      registrationType,
+      pickupSchedule,
+      userId,
     } = req.body;
 
-    // Check if the user is already registered with this service provider
-    const existingRegistration = await Registration.findOne({
-      user,
-      Service_provider_name,
-    });
-
-    if (existingRegistration) {
-      return res.status(400).json({
-        message: "You have already registered with this provider.",
-      });
+    // Validate the presence of all required fields
+    if (
+      !companyName ||
+      !fullName ||
+      !phoneNumber ||
+      !region ||
+      !district ||
+      !registrationType ||
+      !pickupSchedule ||
+      !userId
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    // If no existing registration, create a new one
-    const registration = new Registration({
-      user,
-      Service_provider_name,
+    // Create a new service entry
+    const newService = new Services({
+      companyName,
       fullName,
       phoneNumber,
-      registrationType,
-      pickupSchedule,
       region,
       district,
+      registrationType,
+      pickupSchedule,
+      user: userId, // Reference to the User model
     });
 
-    await registration.save();
-    res
-      .status(201)
-      .json({ message: "Registration created successfully", registration });
+    // Save the new service entry to the database
+    await newService.save();
+
+    res.status(200).json({ message: "Service registered successfully" });
   } catch (error) {
-    res.status(400).json({ message: "Failed to create registration", error });
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ message: "Service registration failed" });
   }
 });
 
-// get services
-app.get("/service_regiestration", async (req, res) => {
+// Endpoint to get all services
+app.get("/service_registration", async (req, res) => {
   try {
-    const registrations = await Registration.find().populate("user"); // populate to fetch user details
-    res.status(200).json(registrations);
+    // Find all services, populate the user field with selected fields (name, profilePicture), and sort by createdAt
+    const services = await Services.find()
+      .populate("user", "name profilePicture") // Populate user fields (name, profilePicture)
+      .sort({ createdAt: -1 }); // Sort services by created date in descending order
+
+    // Return the services
+    res
+      .status(200)
+      .json({ message: "Services retrieved successfully", services });
   } catch (error) {
+    console.error(error); // Log the error for debugging
     res
       .status(500)
-      .json({ message: "Failed to retrieve registrations", error });
+      .json({ message: "An error occurred while getting the services" });
   }
 });
 
