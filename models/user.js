@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-  }, // Added phone field
+    match: /^[0-9]{10}$/, // Adjust this pattern as needed
+  },
   password: {
     type: String,
     required: true,
@@ -24,7 +25,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
-  joindDate: {
+  joinDate: {
     type: Date,
     default: Date.now,
   },
@@ -34,17 +35,16 @@ const userSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
-
   verified: {
     type: Boolean,
     default: false,
   },
   verificationToken: {
     type: String,
+    default: "",
   },
 });
 
-// Create the User model using the combined schema
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
