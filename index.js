@@ -288,7 +288,6 @@ app.delete("/deleteUser", authenticateUser, async (req, res) => {
   }
 });
 
-// PATCH endpoint to update user info
 app.patch("/updateUser/:userId", async (req, res) => {
   const { name, email, phone, profilePicture } = req.body;
   const userId = req.params.userId;
@@ -298,6 +297,7 @@ app.patch("/updateUser/:userId", async (req, res) => {
   }
 
   try {
+    // Check if email or phone already exists for another user
     if (email) {
       const existingEmailUser = await User.findOne({
         email,
@@ -320,11 +320,25 @@ app.patch("/updateUser/:userId", async (req, res) => {
       }
     }
 
-    const updateFields = {};
-    if (name) updateFields.name = name;
-    if (email) updateFields.email = email;
-    if (phone) updateFields.phone = phone;
-    if (profilePicture) updateFields.profilePicture = profilePicture;
+    const updateFields = { name, email, phone };
+
+    // Upload the profile picture to Cloudinary if provided
+    if (profilePicture) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(
+          profilePicture,
+          {
+            folder: "profile_pictures", // Optional: specify folder
+          }
+        );
+        updateFields.profilePicture = uploadResponse.secure_url;
+      } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        return res
+          .status(500)
+          .json({ error: "Failed to upload profile picture" });
+      }
+    }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
       new: true,
@@ -339,6 +353,7 @@ app.patch("/updateUser/:userId", async (req, res) => {
       .status(200)
       .json({ message: "User updated successfully", user: updatedUser });
   } catch (error) {
+    console.error("Update user error:", error);
     res.status(500).json({ error: error.message });
   }
 });
