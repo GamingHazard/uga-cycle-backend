@@ -549,6 +549,21 @@ app.post("/create-post", async (req, res) => {
     res.status(500).json({ message: "Post creation failed" });
   }
 });
+
+// Endpoint to get all posts
+app.get("/get-posts", async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate("user", "name  profilePicture")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "An error occurred while getting the posts" });
+  }
+});
 // Assuming you have a Notification model
 app.get("/notifications/:userId", async (req, res) => {
   try {
