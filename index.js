@@ -235,24 +235,6 @@ const authenticateUser = (req, res, next) => {
   }
 };
 
-// Endpoint to get user profile
-app.get("/profile/:userId", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.params.userId;
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({ user });
-  } catch (error) {
-    console.error("Error while getting the profile", error);
-    res.status(500).json({ message: "Error while getting the profile" });
-  }
-});
-
 // DELETE endpoint to delete user account
 app.delete("/deleteUser", authenticateUser, async (req, res) => {
   try {
@@ -355,6 +337,34 @@ app.patch("/updateUser/:userId", async (req, res) => {
   } catch (error) {
     console.error("Update user error:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+// Endpoint to update user profile picture
+app.patch("/updateProfilePicture/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const { profilePicture } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePicture },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile picture updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error updating profile picture" });
   }
 });
 
