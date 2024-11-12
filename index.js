@@ -603,6 +603,12 @@ app.post("/service_registration", async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    // Check if userId exists in the User model (optional)
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     // Create a new service entry
     const newService = new Services({
       companyName,
@@ -621,7 +627,23 @@ app.post("/service_registration", async (req, res) => {
     res.status(200).json({ message: "Service registered successfully" });
   } catch (error) {
     console.error(error); // Log the error for debugging
-    res.status(500).json({ message: "Service registration failed" });
+
+    // Handle mongoose validation errors
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: "Validation failed", errors: error.errors });
+    }
+
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Duplicate entry detected" });
+    }
+
+    // General error handling
+    res
+      .status(500)
+      .json({ message: "Service registration failed", error: error.message });
   }
 });
 
