@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const ServiceSchema = new mongoose.Schema({
-  companyName: { type: String, required: true }, // Full name of the user
+  companyName: { type: String, required: true, default: "" }, // Full name of the user
   fullName: { type: String, required: true }, // Full name of the user
   phoneNumber: { type: String, required: true }, // User's phone number
   region: { type: String, required: true }, // User's selected region
