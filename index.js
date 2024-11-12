@@ -537,13 +537,6 @@ app.post("/create-post", async (req, res) => {
     const newPost = new Post({ user: userId, content });
     await newPost.save();
 
-    // Notify all connected clients of the new post
-    wss.clients.forEach((client) => {
-      if (client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
-      }
-    });
-
     res.status(200).json({ message: "Post saved successfully" });
   } catch (error) {
     res.status(500).json({ message: "Post creation failed" });
@@ -574,10 +567,9 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to register a service
+// Endpoint to create a service
 app.post("/service_registration", async (req, res) => {
   try {
-    // Extract the required fields from the request body
     const {
       userId,
       companyName,
@@ -589,16 +581,8 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
     } = req.body;
 
-    // Validate the presence of all required fields
-
-    // Check if userId exists in the User model (optional)
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(400).json({ message: "Invalid user ID" });
-    }
-
-    // Create a new service entry
-    const newService = new Services({
+    const newPost = new Services({
+      user: userId,
       companyName,
       fullName,
       phoneNumber,
@@ -606,32 +590,12 @@ app.post("/service_registration", async (req, res) => {
       district,
       registrationType,
       pickupSchedule,
-      user: userId, // Reference to the User model
     });
+    await newPost.save();
 
-    // Save the new service entry to the database
-    await newService.save();
-
-    res.status(200).json({ message: "Service registered successfully" });
+    res.status(200).json({ message: "Post saved successfully" });
   } catch (error) {
-    console.error(error); // Log the error for debugging
-
-    // Handle mongoose validation errors
-    if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ message: "Validation failed", errors: error.errors });
-    }
-
-    // Handle specific MongoDB errors
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Duplicate entry detected" });
-    }
-
-    // General error handling
-    res
-      .status(500)
-      .json({ message: "Service registration failed", error: error.message });
+    res.status(500).json({ message: "Post creation failed" });
   }
 });
 
