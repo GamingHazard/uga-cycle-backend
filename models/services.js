@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const ServiceSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
   companyName: { type: String, required: true }, // Full name of the user
   fullName: { type: String, required: true }, // Full name of the user
   phoneNumber: { type: String, required: true }, // User's phone number
@@ -8,7 +9,7 @@ const ServiceSchema = new mongoose.Schema({
   district: { type: String, required: true }, // User's selected district
   registrationType: { type: String, required: true }, // User's selected registration type
   pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
+
   createdAt: {
     type: Date,
     default: Date.now, // Timestamp of when the service was created
