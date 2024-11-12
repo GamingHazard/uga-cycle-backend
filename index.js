@@ -603,13 +603,13 @@ app.post("/service_registration", async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Create a new service entry
+    // Create a new service entry with the extracted data
     const newService = new Services({
       companyName,
       fullName,
       phoneNumber,
-      region,
-      district,
+      region, // New field for region
+      district, // New field for district
       registrationType,
       pickupSchedule,
       user: userId, // Reference to the User model
@@ -621,7 +621,9 @@ app.post("/service_registration", async (req, res) => {
     res.status(200).json({ message: "Service registered successfully" });
   } catch (error) {
     console.error(error); // Log the error for debugging
-    res.status(500).json({ message: "Service registration failed" });
+    res
+      .status(500)
+      .json({ message: "Service registration failed", error: error.message });
   }
 });
 
