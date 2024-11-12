@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const serviceRegistrationSchema = new mongoose.Schema(
+const ServicesSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -19,10 +19,9 @@ const serviceRegistrationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model(
-  "ServiceRegistration",
-  serviceRegistrationSchema
-);
+const Services = mongoose.model("Services", ServicesSchema);
+
+module.exports = Services;
 
 // const mongoose = require("mongoose");
 
