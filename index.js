@@ -579,8 +579,8 @@ app.post("/service_registration", async (req, res) => {
   try {
     // Extract the required fields from the request body
     const {
-      companyName,
       fullName,
+      company,
       phoneNumber,
       region,
       district,
@@ -591,8 +591,8 @@ app.post("/service_registration", async (req, res) => {
 
     // Create a new service entry with the extracted data
     const newService = new Services({
-      companyName,
       fullName,
+      company,
       phoneNumber,
       region,
       district,
