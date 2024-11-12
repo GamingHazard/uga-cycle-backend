@@ -537,6 +537,13 @@ app.post("/create-post", async (req, res) => {
     const newPost = new Post({ user: userId, content });
     await newPost.save();
 
+    // Notify all connected clients of the new post
+    wss.clients.forEach((client) => {
+      if (client.readyState === ws.OPEN) {
+        client.send(JSON.stringify({ type: "NEW_POST", post: newPost }));
+      }
+    });
+
     res.status(200).json({ message: "Post saved successfully" });
   } catch (error) {
     res.status(500).json({ message: "Post creation failed" });
@@ -567,11 +574,11 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create a service
+// Endpoint to register a service
 app.post("/service_registration", async (req, res) => {
   try {
+    // Extract the required fields from the request body
     const {
-      userId,
       companyName,
       fullName,
       phoneNumber,
@@ -579,10 +586,25 @@ app.post("/service_registration", async (req, res) => {
       district,
       registrationType,
       pickupSchedule,
+      userId,
     } = req.body;
 
-    const newPost = new Services({
-      user: userId,
+    // Validate the presence of all required fields
+    if (
+      !companyName ||
+      !fullName ||
+      !phoneNumber ||
+      !region ||
+      !district ||
+      !registrationType ||
+      !pickupSchedule ||
+      !userId
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Create a new service entry
+    const newService = new Services({
       companyName,
       fullName,
       phoneNumber,
@@ -590,12 +612,16 @@ app.post("/service_registration", async (req, res) => {
       district,
       registrationType,
       pickupSchedule,
+      user: userId, // Reference to the User model
     });
-    await newPost.save();
 
-    res.status(200).json({ message: "Post saved successfully" });
+    // Save the new service entry to the database
+    await newService.save();
+
+    res.status(200).json({ message: "Service registered successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Post creation failed" });
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ message: "Service registration failed" });
   }
 });
 
