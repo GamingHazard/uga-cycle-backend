@@ -589,20 +589,6 @@ app.post("/service_registration", async (req, res) => {
       userId,
     } = req.body;
 
-    // Validate the presence of all required fields
-    if (
-      !companyName ||
-      !fullName ||
-      !phoneNumber ||
-      !region ||
-      !district ||
-      !registrationType ||
-      !pickupSchedule ||
-      !userId
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
     // Create a new service entry with the extracted data
     const newService = new Services({
       companyName,
