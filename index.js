@@ -583,10 +583,10 @@ app.post("/service_registration", async (req, res) => {
       companyName,
       fullName,
       phoneNumber,
-      registrationType,
-      pickupSchedule,
       region,
       district,
+      registrationType,
+      pickupSchedule,
     } = req.body;
 
     // Validate the presence of all required fields
