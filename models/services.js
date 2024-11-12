@@ -15,6 +15,6 @@ const ServiceSchema = new mongoose.Schema({
   },
 });
 
-const Services = mongoose.model("Service", ServiceSchema); // Change model name to 'Service'
+const Services = mongoose.model("Services", ServiceSchema); // Change model name to 'Service'
 
 module.exports = Services;
