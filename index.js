@@ -581,7 +581,7 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
     } = req.body;
 
-    const newPost = new Services({
+    const newPost = new Post({
       user: userId,
       companyName,
       fullName,

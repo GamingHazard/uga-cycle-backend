@@ -9,11 +9,6 @@ const ServiceSchema = new mongoose.Schema({
   district: { type: String, required: true }, // User's selected district
   registrationType: { type: String, required: true }, // User's selected registration type
   pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
-
-  createdAt: {
-    type: Date,
-    default: Date.now, // Timestamp of when the service was created
-  },
 });
 
 const Services = mongoose.model("Service", ServiceSchema); // Change model name to 'Service'
