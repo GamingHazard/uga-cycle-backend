@@ -608,8 +608,8 @@ app.post("/service_registration", async (req, res) => {
       companyName,
       fullName,
       phoneNumber,
-      region, // New field for region
-      district, // New field for district
+      region,
+      district,
       registrationType,
       pickupSchedule,
       user: userId, // Reference to the User model
