@@ -579,29 +579,17 @@ app.post("/service_registration", async (req, res) => {
   try {
     // Extract the required fields from the request body
     const {
+      userId,
       companyName,
       fullName,
       phoneNumber,
-      region,
-      district,
       registrationType,
       pickupSchedule,
-      userId,
+      region,
+      district,
     } = req.body;
 
     // Validate the presence of all required fields
-    if (
-      !companyName ||
-      !fullName ||
-      !phoneNumber ||
-      !region ||
-      !district ||
-      !registrationType ||
-      !pickupSchedule ||
-      !userId
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
 
     // Check if userId exists in the User model (optional)
     const user = await User.findById(userId);
