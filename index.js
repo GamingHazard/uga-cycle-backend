@@ -574,7 +574,7 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create    services
+// Endpoint to create services
 app.post("/service_registration", async (req, res) => {
   try {
     // Extract the required fields from the request body
@@ -589,20 +589,20 @@ app.post("/service_registration", async (req, res) => {
       userId,
     } = req.body;
 
-    // Check if the user is already registered under the same company
+    // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
       company: company, // Check if the same company exists for this user
     });
 
     if (existingService) {
-      // If the service already exists for the user in the same company
+      // Response if the service already exists for the user in the same company
       return res.status(400).json({
         message: "You are already registered under this company.",
       });
     }
 
-    // Create a new service entry with the extracted data
+    // Step 2: Create a new service entry with the extracted data
     const newService = new Services({
       fullName,
       company,
@@ -614,91 +614,56 @@ app.post("/service_registration", async (req, res) => {
       user: userId, // Reference to the User model
     });
 
-    // Save the new service entry to the database
+    // Step 3: Save the new service entry to the database
     await newService.save();
 
-    res.status(200).json({ message: "Service registered successfully" });
+    // Response after successful service registration
+    res.status(200).json({
+      message: "Service registered successfully",
+      serviceDetails: {
+        fullName,
+        company,
+        phoneNumber,
+        region,
+        district,
+        registrationType,
+        pickupSchedule,
+        userId,
+      },
+    });
+
+    console.log("New service registered:", newService);
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    console.error("Error during service registration:", error); // Log the error for debugging
     res
       .status(500)
       .json({ message: "Service registration failed", error: error.message });
   }
 });
 
-app.patch("/update-service/:userId", async (req, res) => {
-  const {
-    fullName,
-    phoneNumber,
-    region,
-    district,
-    registrationType,
-    pickupSchedule,
-  } = req.body;
+app.delete("/delete-service/:userId", async (req, res) => {
   const userId = req.params.userId;
 
+  // Check if the userId is valid
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ error: "Invalid user ID" });
   }
 
   try {
-    const updateFields = {
-      fullName,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-    };
+    // Delete the user by ID
+    const deletedUser = await User.findByIdAndDelete(userId);
 
-    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedUser) {
+    // If the user doesn't exist, return a 404 error
+    if (!deletedUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Respond with a success message
     res
       .status(200)
-      .json({ message: "User updated successfully", user: updatedUser });
+      .json({ message: "User deleted successfully", user: deletedUser });
   } catch (error) {
-    console.error("Update user error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-app.patch("/delete-service/:userId", async (req, res) => {
-  const userId = req.params.userId;
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: "Invalid user ID" });
-  }
-
-  try {
-    const updateFields = {
-      fullName,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-    };
-
-    const updatedUser = await User.findByIdAndDelete(userId, updateFields, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res
-      .status(200)
-      .json({ message: "User updated successfully", user: updatedUser });
-  } catch (error) {
-    console.error("Update user error:", error);
+    console.error("Delete user error:", error);
     res.status(500).json({ error: error.message });
   }
 });
