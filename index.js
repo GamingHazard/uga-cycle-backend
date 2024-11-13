@@ -579,6 +579,7 @@ app.post("/service_registration", async (req, res) => {
   try {
     // Extract the required fields from the request body
     const {
+      company,
       fullName,
       phoneNumber,
       region,
