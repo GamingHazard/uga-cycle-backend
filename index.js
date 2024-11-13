@@ -574,55 +574,34 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create    services
-app.post("/service_registration", async (req, res) => {
+// Endpoint to get all services with user data
+app.get("/service_registration", async (req, res) => {
   try {
-    // Extract the required fields from the request body
-    const {
-      company,
-      fullName,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-      userId,
-    } = req.body;
+    // Find all services and populate user data
+    const services = await Services.find()
+      .populate(
+        "user",
+        "fullName phoneNumber region district registrationType pickupSchedule"
+      ) // Populate user fields (fullName, phoneNumber, region, district, registrationType, pickupSchedule)
+      .sort({ createdAt: -1 }); // Sort services by created date in descending order
 
-    // Check if the user is already registered under the same company
-    const existingService = await Services.findOne({
-      user: userId,
-      company: company, // Check if the same company exists for this user
+    // Return the services along with user data
+    res.status(200).json({
+      message: "Services retrieved successfully",
+      services: services.map((service) => ({
+        fullName: service.user.fullName,
+        phoneNumber: service.user.phoneNumber,
+        region: service.user.region,
+        district: service.user.district,
+        registrationType: service.user.registrationType,
+        pickupSchedule: service.user.pickupSchedule,
+      })),
     });
-
-    if (existingService) {
-      // If the service already exists for the user in the same company
-      return res.status(400).json({
-        message: "You are already registered under this company.",
-      });
-    }
-
-    // Create a new service entry with the extracted data
-    const newService = new Services({
-      fullName,
-      company,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-      user: userId, // Reference to the User model
-    });
-
-    // Save the new service entry to the database
-    await newService.save();
-
-    res.status(200).json({ message: "Service registered successfully" });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res
       .status(500)
-      .json({ message: "Service registration failed", error: error.message });
+      .json({ message: "An error occurred while getting the services" });
   }
 });
 
