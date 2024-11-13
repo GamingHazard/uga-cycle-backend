@@ -580,7 +580,6 @@ app.post("/service_registration", async (req, res) => {
     // Extract the required fields from the request body
     const {
       fullName,
-      company,
       phoneNumber,
       region,
       district,
@@ -686,7 +685,6 @@ app.patch("/update-service/:userId", async (req, res) => {
     // Fields that can be updated
     const {
       fullName,
-      company,
       phoneNumber,
       region,
       district,
@@ -699,8 +697,7 @@ app.patch("/update-service/:userId", async (req, res) => {
       service._id,
       {
         $set: {
-          fullName: fullName || service.fullName,
-          company: company || service.company,
+          fullName: fullName || service.fullName || service.company,
           phoneNumber: phoneNumber || service.phoneNumber,
           region: region || service.region,
           district: district || service.district,
