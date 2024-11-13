@@ -574,55 +574,41 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create    services
-app.post("/service_registration", async (req, res) => {
+// Endpoint to delete a service registration
+app.delete("/service_registration", async (req, res) => {
   try {
-    // Extract the required fields from the request body
-    const {
-      company,
-      fullName,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-      userId,
-    } = req.body;
+    const { userId, company } = req.body;
 
-    // Check if the user is already registered under the same company
-    const existingService = await Services.findOne({
+    // Check if the service registration exists for the user and company
+    const service = await Services.findOne({
       user: userId,
-      company: company, // Check if the same company exists for this user
+      company: company, // Check if the service exists under the specified user and company
     });
 
-    if (existingService) {
-      // If the service already exists for the user in the same company
-      return res.status(400).json({
-        message: "You are already registered under this company.",
+    if (!service) {
+      // If no service found for this user and company
+      return res.status(404).json({
+        message: "Service registration not found for this user and company.",
       });
     }
 
-    // Create a new service entry with the extracted data
-    const newService = new Services({
-      fullName,
-      company,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-      user: userId, // Reference to the User model
+    // Delete the service registration
+    await Services.deleteOne({
+      user: userId,
+      company: company, // Ensure deletion of the correct service entry
     });
 
-    // Save the new service entry to the database
-    await newService.save();
-
-    res.status(200).json({ message: "Service registered successfully" });
+    res
+      .status(200)
+      .json({ message: "Service registration deleted successfully" });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res
       .status(500)
-      .json({ message: "Service registration failed", error: error.message });
+      .json({
+        message: "Failed to delete service registration",
+        error: error.message,
+      });
   }
 });
 
@@ -722,50 +708,6 @@ app.patch("/update-service/:userId", async (req, res) => {
       message: "Failed to update service",
       error: error.message,
     });
-  }
-});
-
-// DELETE endpoint to delete a service by userId from URL and token from header
-app.delete("/delete-service/:userId", async (req, res) => {
-  try {
-    // Extract the userId from the URL parameter
-    const { userId } = req.params;
-
-    // Extract the token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1]; // Assuming the token is passed as "Bearer <token>"
-
-    if (!token) {
-      return res.status(401).json({ message: "Token is required" });
-    }
-
-    // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Adjust JWT secret key as needed
-
-    // Check if the userId in the token matches the userId in the URL parameter
-    if (decoded.userId !== userId) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to delete this service" });
-    }
-
-    // Find the service by the userId
-    const service = await Services.findOne({ user: userId });
-
-    if (!service) {
-      return res
-        .status(404)
-        .json({ message: "Service not found for this user" });
-    }
-
-    // Delete the service
-    await service.deleteOne();
-
-    res.status(200).json({ message: "Service deleted successfully" });
-  } catch (error) {
-    console.error(error); // Log the error for debugging
-    res
-      .status(500)
-      .json({ message: "Failed to delete service", error: error.message });
   }
 });
 
