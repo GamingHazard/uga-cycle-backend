@@ -701,7 +701,7 @@ app.get("/service_registration", async (req, res) => {
 });
 
 // Endpoint to delete a service registration
-app.delete("/delete_service", async (req, res) => {
+app.delete("/delete_service/:userId", async (req, res) => {
   try {
     const { userId, company } = req.body;
 
