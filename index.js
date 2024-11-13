@@ -626,6 +626,49 @@ app.post("/service_registration", async (req, res) => {
   }
 });
 
+app.patch("/update-service/:userId", async (req, res) => {
+  const {
+    fullName,
+    phoneNumber,
+    region,
+    district,
+    registrationType,
+    pickupSchedule,
+  } = req.body;
+  const userId = req.params.userId;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    const updateFields = {
+      fullName,
+      phoneNumber,
+      region,
+      district,
+      registrationType,
+      pickupSchedule,
+    };
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint to get all services with user data
 app.get("/service_registration", async (req, res) => {
   try {
@@ -646,82 +689,6 @@ app.get("/service_registration", async (req, res) => {
     res
       .status(500)
       .json({ message: "An error occurred while getting the services" });
-  }
-});
-
-// PATCH endpoint to update a service by userId and token
-app.patch("/update-service/:userId", async (req, res) => {
-  try {
-    // Extract the userId from the URL parameter
-    const { userId } = req.params;
-
-    // Extract the token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1]; // Assuming token is passed as "Bearer <token>"
-
-    if (!token) {
-      return res.status(401).json({ message: "Token is required" });
-    }
-
-    // Verify the token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET); // Adjust JWT secret key as needed
-    } catch (err) {
-      return res.status(401).json({ message: "Invalid or expired token" });
-    }
-
-    // Check if the userId in the token matches the userId from the URL
-    if (decoded.userId !== userId) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to update this service" });
-    }
-
-    // Find the service by the userId
-    const service = await Services.findOne({ user: userId });
-
-    if (!service) {
-      return res
-        .status(404)
-        .json({ message: "Service not found for this user" });
-    }
-
-    // Fields that can be updated
-    const {
-      fullName,
-      phoneNumber,
-      region,
-      district,
-      registrationType,
-      pickupSchedule,
-    } = req.body;
-
-    // Update the service fields based on the request body
-    const updatedService = await Services.findByIdAndUpdate(
-      service._id,
-      {
-        $set: {
-          fullName: fullName || service.fullName || service.company,
-          phoneNumber: phoneNumber || service.phoneNumber,
-          region: region || service.region,
-          district: district || service.district,
-          registrationType: registrationType || service.registrationType,
-          pickupSchedule: pickupSchedule || service.pickupSchedule,
-        },
-      },
-      { new: true } // Return the updated document
-    );
-
-    res.status(200).json({
-      message: "Service updated successfully",
-      service: updatedService,
-    });
-  } catch (error) {
-    console.error("Error updating service:", error); // Improved logging
-    res.status(500).json({
-      message: "Failed to update service",
-      error: error.message,
-    });
   }
 });
 
