@@ -11,7 +11,6 @@ const cloudinary = require("./cloudinary");
 const streamifier = require("streamifier");
 const app = express();
 const port = 3000;
-const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const http = require("http");
 const wsProtocol = process.env.NODE_ENV === "production" ? "wss" : "ws";
@@ -575,7 +574,7 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create   services
+// Endpoint to create    services
 app.post("/service_registration", async (req, res) => {
   try {
     // Extract the required fields from the request body
