@@ -668,6 +668,40 @@ app.patch("/update-service/:userId", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+app.patch("/delete-service/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    const updateFields = {
+      fullName,
+      phoneNumber,
+      region,
+      district,
+      registrationType,
+      pickupSchedule,
+    };
+
+    const updatedUser = await User.findByIdAndDelete(userId, updateFields, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Endpoint to get all services with user data
 app.get("/service_registration", async (req, res) => {
@@ -700,41 +734,41 @@ app.get("/service_registration", async (req, res) => {
   }
 });
 
-// Endpoint to delete a service registration
-app.delete("/delete_service/:userId", async (req, res) => {
-  try {
-    const { userId, company } = req.body;
+// // Endpoint to delete a service registration
+// app.delete("/delete_service/:userId", async (req, res) => {
+//   try {
+//     const { userId, company } = req.body;
 
-    // Check if the service registration exists for the user and company
-    const service = await Services.findOne({
-      user: userId,
-      company: company, // Check if the service exists under the specified user and company
-    });
+//     // Check if the service registration exists for the user and company
+//     const service = await Services.findOne({
+//       user: userId,
+//       company: company, // Check if the service exists under the specified user and company
+//     });
 
-    if (!service) {
-      // If no service found for this user and company
-      return res.status(404).json({
-        message: "Service registration not found for this user and company.",
-      });
-    }
+//     if (!service) {
+//       // If no service found for this user and company
+//       return res.status(404).json({
+//         message: "Service registration not found for this user and company.",
+//       });
+//     }
 
-    // Delete the service registration
-    await Services.deleteOne({
-      user: userId,
-      company: company, // Ensure deletion of the correct service entry
-    });
+//     // Delete the service registration
+//     await Services.deleteOne({
+//       user: userId,
+//       company: company, // Ensure deletion of the correct service entry
+//     });
 
-    res
-      .status(200)
-      .json({ message: "Service registration deleted successfully" });
-  } catch (error) {
-    console.error(error); // Log the error for debugging
-    res.status(500).json({
-      message: "Failed to delete service registration",
-      error: error.message,
-    });
-  }
-});
+//     res
+//       .status(200)
+//       .json({ message: "Service registration deleted successfully" });
+//   } catch (error) {
+//     console.error(error); // Log the error for debugging
+//     res.status(500).json({
+//       message: "Failed to delete service registration",
+//       error: error.message,
+//     });
+//   }
+// });
 
 // Endpoint to create a new tip
 app.post("/create-tip", async (req, res) => {
