@@ -625,15 +625,18 @@ app.post("/service_registration", async (req, res) => {
   }
 });
 
-// Endpoint to get all services
+// Endpoint to get all services with user data
 app.get("/service_registration", async (req, res) => {
   try {
-    // Find all services, populate the user field with selected fields (name, profilePicture), and sort by createdAt
+    // Find all services and populate user data
     const services = await Services.find()
-      .populate("user", "name profilePicture") // Populate user fields (name, profilePicture)
+      .populate(
+        "user",
+        "fullName phoneNumber region district registrationType pickupSchedule"
+      ) // Populate user fields (fullName, phoneNumber, region, district, registrationType, pickupSchedule)
       .sort({ createdAt: -1 }); // Sort services by created date in descending order
 
-    // Return the services
+    // Return the services along with user data
     res
       .status(200)
       .json({ message: "Services retrieved successfully", services });
