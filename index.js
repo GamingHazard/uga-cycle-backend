@@ -11,6 +11,7 @@ const cloudinary = require("./cloudinary");
 const streamifier = require("streamifier");
 const app = express();
 const port = 3000;
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const http = require("http");
 const wsProtocol = process.env.NODE_ENV === "production" ? "wss" : "ws";
@@ -574,7 +575,7 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to register a service
+// Endpoint to create   services
 app.post("/service_registration", async (req, res) => {
   try {
     // Extract the required fields from the request body
@@ -588,6 +589,19 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
       userId,
     } = req.body;
+
+    // Check if the user is already registered under the same company
+    const existingService = await Services.findOne({
+      user: userId,
+      company: company, // Check if the same company exists for this user
+    });
+
+    if (existingService) {
+      // If the service already exists for the user in the same company
+      return res.status(400).json({
+        message: "You are already registered under this company.",
+      });
+    }
 
     // Create a new service entry with the extracted data
     const newService = new Services({
@@ -630,6 +644,122 @@ app.get("/service_registration", async (req, res) => {
     res
       .status(500)
       .json({ message: "An error occurred while getting the services" });
+  }
+});
+
+// PATCH endpoint to update a service by userId and token
+app.patch("/update-service/:userId", async (req, res) => {
+  try {
+    // Extract the userId from the URL parameter
+    const { userId } = req.params;
+
+    // Extract the token from the Authorization header
+    const token = req.headers.authorization?.split(" ")[1]; // Assuming token is passed as "Bearer <token>"
+
+    if (!token) {
+      return res.status(401).json({ message: "Token is required" });
+    }
+
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Adjust JWT secret key as needed
+
+    // Check if the userId in the token matches the userId from the URL
+    if (decoded.userId !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to update this service" });
+    }
+
+    // Find the service by the userId
+    const service = await Services.findOne({ user: userId });
+
+    if (!service) {
+      return res
+        .status(404)
+        .json({ message: "Service not found for this user" });
+    }
+
+    // Fields that can be updated
+    const {
+      fullName,
+      company,
+      phoneNumber,
+      region,
+      district,
+      registrationType,
+      pickupSchedule,
+    } = req.body;
+
+    // Update the service fields based on the request body
+    const updatedService = await Services.findByIdAndUpdate(
+      service._id,
+      {
+        $set: {
+          fullName: fullName || service.fullName,
+          company: company || service.company,
+          phoneNumber: phoneNumber || service.phoneNumber,
+          region: region || service.region,
+          district: district || service.district,
+          registrationType: registrationType || service.registrationType,
+          pickupSchedule: pickupSchedule || service.pickupSchedule,
+        },
+      },
+      { new: true } // Return the updated document
+    );
+
+    res.status(200).json({
+      message: "Service updated successfully",
+      service: updatedService,
+    });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res
+      .status(500)
+      .json({ message: "Failed to update service", error: error.message });
+  }
+});
+
+// DELETE endpoint to delete a service by userId from URL and token from header
+app.delete("/delete-service/:userId", async (req, res) => {
+  try {
+    // Extract the userId from the URL parameter
+    const { userId } = req.params;
+
+    // Extract the token from the Authorization header
+    const token = req.headers.authorization?.split(" ")[1]; // Assuming the token is passed as "Bearer <token>"
+
+    if (!token) {
+      return res.status(401).json({ message: "Token is required" });
+    }
+
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Adjust JWT secret key as needed
+
+    // Check if the userId in the token matches the userId in the URL parameter
+    if (decoded.userId !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to delete this service" });
+    }
+
+    // Find the service by the userId
+    const service = await Services.findOne({ user: userId });
+
+    if (!service) {
+      return res
+        .status(404)
+        .json({ message: "Service not found for this user" });
+    }
+
+    // Delete the service
+    await service.deleteOne();
+
+    res.status(200).json({ message: "Service deleted successfully" });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res
+      .status(500)
+      .json({ message: "Failed to delete service", error: error.message });
   }
 });
 
