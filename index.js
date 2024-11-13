@@ -641,29 +641,41 @@ app.post("/service_registration", async (req, res) => {
   }
 });
 
-app.delete("/delete-service/:userId", async (req, res) => {
+app.patch("/delete-service/:userId", async (req, res) => {
   const userId = req.params.userId;
 
-  // Check if the userId is valid
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ error: "Invalid user ID" });
   }
 
   try {
-    // Delete the user by ID
-    const deletedUser = await User.findByIdAndDelete(userId);
+    // List of fields to be cleared
+    const updateFields = {
+      company: "",
+      fullName: "",
+      phoneNumber: "",
+      region: "",
+      district: "",
+      registrationType: "",
+      pickupSchedule: "",
+    };
 
-    // If the user doesn't exist, return a 404 error
-    if (!deletedUser) {
+    // Update the user data by clearing the specified fields
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+      new: true, // Return the updated user document
+      runValidators: true, // Run schema validation
+    });
+
+    if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Respond with a success message
+    // Return success message
     res
       .status(200)
-      .json({ message: "User deleted successfully", user: deletedUser });
+      .json({ message: "User data cleared successfully", user: updatedUser });
   } catch (error) {
-    console.error("Delete user error:", error);
+    console.error("Update user error:", error);
     res.status(500).json({ error: error.message });
   }
 });
