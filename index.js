@@ -75,7 +75,7 @@ const salesPost = require("./models/sellPost");
 // Endpoint to register a user
 app.post("/register", async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { role, name, email, phone, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -85,7 +85,13 @@ app.post("/register", async (req, res) => {
     // Hash the password before saving the user
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new User({ name, email, phone, password: hashedPassword });
+    const newUser = new User({
+      role,
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+    });
     newUser.verificationToken = crypto.randomBytes(20).toString("hex");
 
     await newUser.save();
@@ -99,6 +105,7 @@ app.post("/register", async (req, res) => {
     // Return all user details including user ID and token
     const userDetails = {
       id: newUser._id,
+      role: newUser.role,
       name: newUser.name,
       email: newUser.email,
       phone: newUser.phone,
@@ -196,6 +203,7 @@ app.post("/login", async (req, res) => {
       token,
       user: {
         id: user._id,
+        role: user.role,
         name: user.name,
         email: user.email,
         phone: user.phone,
