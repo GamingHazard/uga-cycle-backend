@@ -660,7 +660,12 @@ app.patch("/update-service/:userId", async (req, res) => {
     }
 
     // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Adjust JWT secret key as needed
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET); // Adjust JWT secret key as needed
+    } catch (err) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
 
     // Check if the userId in the token matches the userId from the URL
     if (decoded.userId !== userId) {
@@ -711,10 +716,11 @@ app.patch("/update-service/:userId", async (req, res) => {
       service: updatedService,
     });
   } catch (error) {
-    console.error(error); // Log the error for debugging
-    res
-      .status(500)
-      .json({ message: "Failed to update service", error: error.message });
+    console.error("Error updating service:", error); // Improved logging
+    res.status(500).json({
+      message: "Failed to update service",
+      error: error.message,
+    });
   }
 });
 
