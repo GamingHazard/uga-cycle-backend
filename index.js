@@ -574,41 +574,55 @@ app.get("/notifications/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to delete a service registration
-app.delete("/service_registration", async (req, res) => {
+// Endpoint to create    services
+app.post("/service_registration", async (req, res) => {
   try {
-    const { userId, company } = req.body;
+    // Extract the required fields from the request body
+    const {
+      company,
+      fullName,
+      phoneNumber,
+      region,
+      district,
+      registrationType,
+      pickupSchedule,
+      userId,
+    } = req.body;
 
-    // Check if the service registration exists for the user and company
-    const service = await Services.findOne({
+    // Check if the user is already registered under the same company
+    const existingService = await Services.findOne({
       user: userId,
-      company: company, // Check if the service exists under the specified user and company
+      company: company, // Check if the same company exists for this user
     });
 
-    if (!service) {
-      // If no service found for this user and company
-      return res.status(404).json({
-        message: "Service registration not found for this user and company.",
+    if (existingService) {
+      // If the service already exists for the user in the same company
+      return res.status(400).json({
+        message: "You are already registered under this company.",
       });
     }
 
-    // Delete the service registration
-    await Services.deleteOne({
-      user: userId,
-      company: company, // Ensure deletion of the correct service entry
+    // Create a new service entry with the extracted data
+    const newService = new Services({
+      fullName,
+      company,
+      phoneNumber,
+      region,
+      district,
+      registrationType,
+      pickupSchedule,
+      user: userId, // Reference to the User model
     });
 
-    res
-      .status(200)
-      .json({ message: "Service registration deleted successfully" });
+    // Save the new service entry to the database
+    await newService.save();
+
+    res.status(200).json({ message: "Service registered successfully" });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res
       .status(500)
-      .json({
-        message: "Failed to delete service registration",
-        error: error.message,
-      });
+      .json({ message: "Service registration failed", error: error.message });
   }
 });
 
@@ -706,6 +720,42 @@ app.patch("/update-service/:userId", async (req, res) => {
     console.error("Error updating service:", error); // Improved logging
     res.status(500).json({
       message: "Failed to update service",
+      error: error.message,
+    });
+  }
+});
+
+// Endpoint to delete a service registration
+app.delete("/service_registration", async (req, res) => {
+  try {
+    const { userId, company } = req.body;
+
+    // Check if the service registration exists for the user and company
+    const service = await Services.findOne({
+      user: userId,
+      company: company, // Check if the service exists under the specified user and company
+    });
+
+    if (!service) {
+      // If no service found for this user and company
+      return res.status(404).json({
+        message: "Service registration not found for this user and company.",
+      });
+    }
+
+    // Delete the service registration
+    await Services.deleteOne({
+      user: userId,
+      company: company, // Ensure deletion of the correct service entry
+    });
+
+    res
+      .status(200)
+      .json({ message: "Service registration deleted successfully" });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({
+      message: "Failed to delete service registration",
       error: error.message,
     });
   }
