@@ -206,6 +206,7 @@ app.post("/login", async (req, res) => {
         role: user.role,
         name: user.name,
         email: user.email,
+        profilePicture: user.profilePicture,
         phone: user.phone,
       },
     });
