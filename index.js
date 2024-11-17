@@ -630,6 +630,7 @@ app.post("/service_registration", async (req, res) => {
     res.status(200).json({
       message: "Service registered successfully",
       serviceDetails: {
+        id: newService._id, // Include the ID of the newly created service
         fullName,
         company,
         phoneNumber,
