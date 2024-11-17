@@ -378,6 +378,29 @@ app.patch("/updateProfilePicture/:userId", async (req, res) => {
   }
 });
 
+// DELETE endpoint to delete user account
+app.delete("/deleteUser/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId; // Get userId from URL
+    const deleteUser = await User.findByIdAndDelete(userId);
+
+    if (!deleteUser) {
+      return res
+        .status(404)
+        .json({ status: "fail", message: "User not found" });
+    }
+
+    res
+      .status(200)
+      .json({ status: "success", message: "Account deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting user account", error);
+    res
+      .status(500)
+      .json({ status: "error", message: "Failed to delete account" });
+  }
+});
+
 // Endpoint to reset password
 app.patch("/reset-password/:token", async (req, res) => {
   try {
