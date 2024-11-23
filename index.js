@@ -720,6 +720,7 @@ app.get("/services", async (req, res) => {
         wasteType: service.wasteType,
         location: service.location,
         userId: service.user,
+        date: service.createdAt,
       })),
     });
   } catch (error) {
