@@ -46,6 +46,7 @@ server.listen(PORT, () => {
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 const jwt = require("jsonwebtoken");
+app.use(cors());
 
 mongoose
   .connect(process.env.DB_URL, {
@@ -613,11 +614,15 @@ app.post("/service_registration", async (req, res) => {
     const {
       company,
       fullName,
+      email,
+      serviceType,
       phoneNumber,
       region,
       district,
       registrationType,
       pickupSchedule,
+      wasteType,
+      location,
       userId,
     } = req.body;
 
@@ -636,13 +641,17 @@ app.post("/service_registration", async (req, res) => {
 
     // Step 2: Create a new service entry with the extracted data
     const newService = new Services({
-      fullName,
       company,
+      fullName,
+      email,
+      serviceType,
       phoneNumber,
       region,
       district,
       registrationType,
       pickupSchedule,
+      wasteType,
+      location,
       user: userId, // Reference to the User model
     });
 
@@ -654,13 +663,17 @@ app.post("/service_registration", async (req, res) => {
       message: "Service registered successfully",
       serviceDetails: {
         id: newService._id, // Include the ID of the newly created service
-        fullName,
         company,
+        fullName,
+        email,
+        serviceType,
         phoneNumber,
         region,
         district,
         registrationType,
         pickupSchedule,
+        wasteType,
+        location,
         userId,
       },
     });
@@ -674,34 +687,110 @@ app.post("/service_registration", async (req, res) => {
   }
 });
 
-// Endpoint to get all services with user data
-app.get("/service_registration", async (req, res) => {
+// Endpoint to fetch all registered services
+app.get("/services", async (req, res) => {
   try {
-    // Find all services and populate user data
-    const services = await Services.find()
-      .populate(
-        "user",
-        "fullName phoneNumber region district registrationType pickupSchedule"
-      ) // Populate user fields (fullName, phoneNumber, region, district, registrationType, pickupSchedule)
-      .sort({ createdAt: -1 }); // Sort services by created date in descending order
+    // Fetch all services from the database
+    const services = await Services.find().populate(
+      "user",
+      "name email  profilePicture"
+    );
 
-    // Return the services along with user data
+    // Check if services exist
+    if (services.length === 0) {
+      return res.status(404).json({
+        message: "No services found.",
+      });
+    }
+
+    // Response with the fetched services
     res.status(200).json({
-      message: "Services retrieved successfully",
+      message: "Services fetched successfully",
       services: services.map((service) => ({
-        fullName: service.user.fullName,
-        phoneNumber: service.user.phoneNumber,
-        region: service.user.region,
-        district: service.user.district,
-        registrationType: service.user.registrationType,
-        pickupSchedule: service.user.pickupSchedule,
+        id: service._id,
+        company: service.company,
+        fullName: service.fullName,
+        email: service.email,
+        serviceType: service.serviceType,
+        phoneNumber: service.phoneNumber,
+        region: service.region,
+        district: service.district,
+        registrationType: service.registrationType,
+        pickupSchedule: service.pickupSchedule,
+        wasteType: service.wasteType,
+        location: service.location,
+        userId: service.user,
       })),
     });
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    console.error("Error fetching services:", error); // Log the error for debugging
+    res.status(500).json({
+      message: "Failed to fetch services",
+      error: error.message,
+    });
+  }
+});
+
+// Endpoint for approving a user
+app.put("/services/:postId/:userId/approve", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const post = await Services.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
+
+    const updatedPost = await Services.findByIdAndUpdate(
+      postId,
+      { $addToSet: { approval: userId } },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    updatedPost.user = post.user;
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error("Error liking post:", error);
     res
       .status(500)
-      .json({ message: "An error occurred while getting the services" });
+      .json({ message: "An error occurred while liking the post" });
+  }
+});
+
+// Endpoint to unlike a post
+app.put("/services/:postId/:userId/disapprove", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const post = await Services.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
+
+    const updatedPost = await Services.findByIdAndUpdate(
+      postId,
+      { $pull: { approval: userId } },
+      { new: true }
+    );
+
+    updatedPost.user = post.user;
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.json(updatedPost);
+  } catch (error) {
+    console.error("Error unliking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while unliking the post" });
   }
 });
 
