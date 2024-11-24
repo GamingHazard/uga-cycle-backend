@@ -12,13 +12,9 @@ const ServiceSchema = new mongoose.Schema({
   pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
   wasteType: { type: String, required: true }, // User's selected pickup schedule
   location: { type: String }, // User's selected pickup schedule
+  status: { type: String, default: "notApproved" },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
-  likes: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  ],
+
   createdAt: {
     type: Date,
     default: Date.now, // Timestamp of when the service was created

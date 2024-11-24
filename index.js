@@ -68,11 +68,64 @@ const upload = multer({
 }); // Limit file size to 5MB
 
 const User = require("./models/user");
+const Admin = require("./models/admins");
 const Post = require("./models/post");
 const Tips = require("./models/tip");
 const Services = require("./models/services");
 const salesPost = require("./models/sellPost");
 
+// Endpoint to register an admin
+app.post("/admin-register", async (req, res) => {
+  try {
+    const { role, name, organization, email, phone, password } = req.body;
+
+    const existingUser = await Admin.findOne({ email, organization, phone });
+    if (existingUser) {
+      return res.status(400).json({ message: "already registered" });
+    }
+
+    // Hash the password before saving the user
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new Admin({
+      role,
+      name,
+      organization,
+      email,
+      phone,
+      password: hashedPassword,
+    });
+    newUser.verificationToken = crypto.randomBytes(20).toString("hex");
+
+    await newUser.save();
+    sendVerificationEmail(newUser.email, newUser.verificationToken);
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: newUser._id }, secretKey, {
+      expiresIn: "1h",
+    });
+
+    // Return all user details including user ID and token
+    const userDetails = {
+      id: newUser._id,
+      role: newUser.role,
+      name: newUser.name,
+      organization: newUser.organization,
+      email: newUser.email,
+      phone: newUser.phone,
+      verified: newUser.verified,
+      token, // Add the token to the response
+    };
+
+    res
+      .status(201)
+      .json({ message: "Registration successful", user: userDetails });
+    console.log("User registered:", userDetails);
+  } catch (error) {
+    console.log("Error registering user", error);
+    res.status(500).json({ message: "Error registering user" });
+  }
+});
 // Endpoint to register a user
 app.post("/register", async (req, res) => {
   try {
@@ -172,6 +225,51 @@ const generateSecretKey = () => {
 
 const secretKey = generateSecretKey();
 
+//  Endpoint for admin Login
+app.post("/admin-login", async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+
+    // Find user by email or phone
+    const user = await Admin.findOne({
+      $or: [{ email: identifier }, { phone: identifier }],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the password matches
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Wrong password, check your password and try again",
+      });
+    }
+
+    // Generate JWT token with a secret key
+    const token = jwt.sign({ userId: user._id }, "your_secret_key_here", {
+      expiresIn: "1d",
+    });
+
+    // Respond with the token and user information including user ID
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        role: user.role,
+        name: user.name,
+        organization: user.organization,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        phone: user.phone,
+      },
+    });
+  } catch (error) {
+    console.error("Error during login", error);
+    res.status(500).json({ message: "Login failed" });
+  }
+});
 //  Endpoint for Users Login
 app.post("/login", async (req, res) => {
   try {
