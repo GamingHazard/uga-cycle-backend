@@ -830,34 +830,31 @@ app.get("/services", async (req, res) => {
   }
 });
 
-// Endpoint for approving a user
-app.put("/services/:postId/:userId/approve", async (req, res) => {
-  const postId = req.params.postId;
-  const userId = req.params.userId;
+// PUT endpoint to approve a service
+app.put("/services/:id/approve", async (req, res) => {
+  const { id } = req.params;
 
   try {
-    const post = await Services.findById(postId).populate(
-      "user",
-      "name  profilePicture"
+    // Find the service by ID and update its status to "approved"
+    const updatedService = await Services.findByIdAndUpdate(
+      id,
+      { status: "approved" },
+      { new: true } // Return the updated document
     );
 
-    const updatedPost = await Services.findByIdAndUpdate(
-      postId,
-      { $addToSet: { approval: userId } },
-      { new: true }
-    );
-
-    if (!updatedPost) {
-      return res.status(404).json({ message: "Post not found" });
+    if (!updatedService) {
+      return res.status(404).json({ message: "Service not found" });
     }
-    updatedPost.user = post.user;
 
-    res.json(updatedPost);
-  } catch (error) {
-    console.error("Error liking post:", error);
     res
-      .status(500)
-      .json({ message: "An error occurred while liking the post" });
+      .status(200)
+      .json({
+        message: "Service approved successfully",
+        service: updatedService,
+      });
+  } catch (error) {
+    console.error("Error approving service:", error);
+    res.status(500).json({ message: "Failed to approve service" });
   }
 });
 
