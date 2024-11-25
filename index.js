@@ -98,7 +98,6 @@ app.post("/admin-register", async (req, res) => {
     newUser.verificationToken = crypto.randomBytes(20).toString("hex");
 
     await newUser.save();
-    sendVerificationEmail(newUser.email, newUser.verificationToken);
 
     // Generate JWT token
     const token = jwt.sign({ userId: newUser._id }, secretKey, {
@@ -344,40 +343,30 @@ const authenticateUser = (req, res, next) => {
   }
 };
 
-// DELETE endpoint to delete admin account
-app.delete("/delete-admin/:userId", async (req, res) => {
-  try {
-    const userId = req.params.userId; // Get userId from URL
-    const deleteUser = await Admin.findByIdAndDelete(userId);
-
-    if (!deleteUser) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User not found" });
-    }
-
-    res
-      .status(200)
-      .json({ status: "success", message: "Account deleted successfully" });
-  } catch (error) {
-    console.log("Error deleting user account", error);
-    res
-      .status(500)
-      .json({ status: "error", message: "Failed to delete account" });
-  }
-});
 // DELETE endpoint to delete user account
-app.delete("/deleteUser/:userId", async (req, res) => {
+app.delete("/deleteUser", authenticateUser, async (req, res) => {
   try {
-    const userId = req.params.userId; // Get userId from URL
-    const deleteUser = await User.findByIdAndDelete(userId);
+    const userId = req.user.id; // Get userId from authenticated user context
+    const { password } = req.body; // Get password from request body
 
-    if (!deleteUser) {
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
       return res
         .status(404)
         .json({ status: "fail", message: "User not found" });
     }
 
+    // Verify the password (ensure you have a method to compare passwords)
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res
+        .status(401)
+        .json({ status: "fail", message: "Incorrect password" });
+    }
+
+    // If password is correct, delete the user
+    await User.findByIdAndDelete(userId);
     res
       .status(200)
       .json({ status: "success", message: "Account deleted successfully" });
@@ -389,77 +378,6 @@ app.delete("/deleteUser/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to update admin profile
-app.patch("/update-admin-profile/:userId", async (req, res) => {
-  const { name, email, phone, profilePicture } = req.body;
-  const userId = req.params.userId;
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: "Invalid user ID" });
-  }
-
-  try {
-    // Check if email or phone already exists for another user
-    if (email) {
-      const existingEmailUser = await Admin.findOne({
-        email,
-        _id: { $ne: userId },
-      });
-      if (existingEmailUser) {
-        return res.status(400).json({ error: "Email is already in use" });
-      }
-    }
-
-    if (phone) {
-      const existingPhoneUser = await Admin.findOne({
-        phone,
-        _id: { $ne: userId },
-      });
-      if (existingPhoneUser) {
-        return res
-          .status(400)
-          .json({ error: "Phone number is already in use" });
-      }
-    }
-
-    const updateFields = { name, email, phone };
-
-    // Upload the profile picture to Cloudinary if provided
-    if (profilePicture) {
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(
-          profilePicture,
-          {
-            folder: "profile_pictures", // Optional: specify folder
-          }
-        );
-        updateFields.profilePicture = uploadResponse.secure_url;
-      } catch (error) {
-        console.error("Cloudinary upload error:", error);
-        return res
-          .status(500)
-          .json({ error: "Failed to upload profile picture" });
-      }
-    }
-
-    const updatedUser = await Admin.findByIdAndUpdate(userId, updateFields, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res
-      .status(200)
-      .json({ message: "User updated successfully", user: updatedUser });
-  } catch (error) {
-    console.error("Update user error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-// Endpoint to update user profile
 app.patch("/updateUser/:userId", async (req, res) => {
   const { name, email, phone, profilePicture } = req.body;
   const userId = req.params.userId;
@@ -529,7 +447,6 @@ app.patch("/updateUser/:userId", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 // Endpoint to update user profile picture
 app.patch("/updateProfilePicture/:userId", async (req, res) => {
   const userId = req.params.userId;
@@ -556,6 +473,29 @@ app.patch("/updateProfilePicture/:userId", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Error updating profile picture" });
+  }
+});
+
+// DELETE endpoint to delete user account
+app.delete("/deleteUser/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId; // Get userId from URL
+    const deleteUser = await User.findByIdAndDelete(userId);
+
+    if (!deleteUser) {
+      return res
+        .status(404)
+        .json({ status: "fail", message: "User not found" });
+    }
+
+    res
+      .status(200)
+      .json({ status: "success", message: "Account deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting user account", error);
+    res
+      .status(500)
+      .json({ status: "error", message: "Failed to delete account" });
   }
 });
 
@@ -754,6 +694,15 @@ app.get("/get-posts", async (req, res) => {
       .json({ message: "An error occurred while getting the posts" });
   }
 });
+// Assuming you have a Notification model
+app.get("/notifications/:userId", async (req, res) => {
+  try {
+    const notifications = await Notification.find({ user: req.params.userId });
+    res.status(200).json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch notifications" });
+  }
+});
 
 // Endpoint to create services
 app.post("/service_registration", async (req, res) => {
@@ -773,7 +722,7 @@ app.post("/service_registration", async (req, res) => {
       location,
       userId,
     } = req.body;
-    const status = "Not Approved";
+
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
@@ -800,7 +749,6 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
       wasteType,
       location,
-      status,
       user: userId, // Reference to the User model
     });
 
@@ -823,7 +771,6 @@ app.post("/service_registration", async (req, res) => {
         pickupSchedule,
         wasteType,
         location,
-        status,
         userId,
       },
     });
@@ -837,12 +784,103 @@ app.post("/service_registration", async (req, res) => {
   }
 });
 
+// Endpoint to fetch all registered services
+app.get("/services", async (req, res) => {
+  try {
+    // Fetch all services from the database
+    const services = await Services.find().populate(
+      "user",
+      "name email  profilePicture"
+    );
+
+    // Check if services exist
+    if (services.length === 0) {
+      return res.status(404).json({
+        message: "No services found.",
+      });
+    }
+
+    // Response with the fetched services
+    res.status(200).json({
+      message: "Services fetched successfully",
+      services: services.map((service) => ({
+        id: service._id,
+        company: service.company,
+        fullName: service.fullName,
+        email: service.email,
+        serviceType: service.serviceType,
+        phoneNumber: service.phoneNumber,
+        region: service.region,
+        district: service.district,
+        registrationType: service.registrationType,
+        pickupSchedule: service.pickupSchedule,
+        wasteType: service.wasteType,
+        location: service.location,
+        userId: service.user,
+        date: service.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching services:", error); // Log the error for debugging
+    res.status(500).json({
+      message: "Failed to fetch services",
+      error: error.message,
+    });
+  }
+});
+
+// Endpoint to fetch only approved services
+app.get("/services/approved", async (req, res) => {
+  try {
+    // Fetch services with status "approved"
+    const approvedServices = await Services.find({
+      status: "Approved",
+    }).populate("user", "name email profilePicture");
+
+    // Check if any approved services exist
+    if (approvedServices.length === 0) {
+      return res.status(404).json({
+        message: "No approved services found.",
+      });
+    }
+
+    // Respond with the approved services
+    res.status(200).json({
+      message: "Approved services fetched successfully",
+      services: approvedServices.map((service) => ({
+        id: service._id,
+        company: service.company,
+        fullName: service.fullName,
+        email: service.email,
+        serviceType: service.serviceType,
+        phoneNumber: service.phoneNumber,
+        region: service.region,
+        district: service.district,
+        registrationType: service.registrationType,
+        pickupSchedule: service.pickupSchedule,
+        wasteType: service.wasteType,
+        location: service.location,
+        userId: service.user,
+        date: service.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching approved services:", error); // Log error for debugging
+    res.status(500).json({
+      message: "Failed to fetch approved services",
+      error: error.message,
+    });
+  }
+});
+
 // Endpoint to fetch all services with status "notApproved"
 app.get("/services/not-approved", async (req, res) => {
   try {
-    const services = await Services.find({
-      $or: [{ status: "Not Approved" }, { status: "" }],
-    }).populate("user", "name email profilePicture");
+    // Fetch all services with status "notApproved"
+    const services = await Services.find({ status: "Not Approved" }).populate(
+      "user",
+      "name email profilePicture"
+    );
 
     // Check if services exist
     if (services.length === 0) {
@@ -880,122 +918,66 @@ app.get("/services/not-approved", async (req, res) => {
   }
 });
 
-// Endpoint to fetch only approved services
-app.get("/services/approved", async (req, res) => {
-  try {
-    // Fetch services with status "approved"
-    const approvedServices = await Services.find({
-      status: "Approved",
-    }).populate("user", "name email profilePicture");
-
-    // Check if any approved services exist
-    if (approvedServices.length === 0) {
-      return res.status(404).json({
-        message: "No approved services found.",
-      });
-    }
-
-    // Respond with the approved services
-    res.status(200).json({
-      message: "Approved services fetched successfully",
-      services: approvedServices.map((service) => ({
-        id: service._id,
-        company: service.company,
-        fullName: service.fullName,
-        email: service.email,
-        serviceType: service.serviceType,
-        phoneNumber: service.phoneNumber,
-        region: service.region,
-        district: service.district,
-        registrationType: service.registrationType,
-        pickupSchedule: service.pickupSchedule,
-        wasteType: service.wasteType,
-        location: service.location,
-        status: service.status,
-        userId: service.user,
-        date: service.createdAt,
-      })),
-    });
-  } catch (error) {
-    console.error("Error fetching approved services:", error); // Log error for debugging
-    res.status(500).json({
-      message: "Failed to fetch approved services",
-      error: error.message,
-    });
-  }
-});
-
-// PUT endpoint to approve a service
-app.put("/services/:id/approve", async (req, res) => {
-  const { id } = req.params;
+// Endpoint for approving a user
+app.put("/services/:postId/:userId/approve", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
 
   try {
-    // Find the service by ID and update its status to "approved"
-    const updatedService = await Services.findByIdAndUpdate(
-      id,
-      { status: "Approved" },
-      { new: true } // Return the updated document
+    const post = await Services.findById(postId).populate(
+      "user",
+      "name  profilePicture"
     );
 
-    if (!updatedService) {
-      return res.status(404).json({ message: "Service not found" });
-    }
-
-    res.status(200).json({
-      message: "Service approved successfully",
-      service: updatedService,
-    });
-  } catch (error) {
-    console.error("Error approving service:", error);
-    res.status(500).json({ message: "Failed to approve service" });
-  }
-});
-
-app.put("/services/:id/disapprove", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Update the status to "notApproved"
-    const service = await Services.findByIdAndUpdate(
-      id,
-      { status: "Not Approved" },
-      { new: true } // Return the updated document
+    const updatedPost = await Services.findByIdAndUpdate(
+      postId,
+      { $addToSet: { approval: userId } },
+      { new: true }
     );
 
-    // Check if the service exists
-    if (!service) {
-      return res.status(404).json({ message: "Service not found" });
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
     }
+    updatedPost.user = post.user;
 
-    res.json({ message: "Service disapproved successfully", service });
+    res.json(updatedPost);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error liking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while liking the post" });
   }
 });
 
-// Get the status of a specific user
-app.get("/user/:userId/status", async (req, res) => {
-  const { userId } = req.params;
+// Endpoint to unlike a post
+app.put("/services/:postId/:userId/disapprove", async (req, res) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
 
   try {
-    // Find the service record(s) associated with the given user ID
-    const service = await Services.findOne({ user: userId });
+    const post = await Services.findById(postId).populate(
+      "user",
+      "name  profilePicture"
+    );
 
-    if (!service) {
-      return res
-        .status(404)
-        .json({ message: "User not found or has no services." });
+    const updatedPost = await Services.findByIdAndUpdate(
+      postId,
+      { $pull: { approval: userId } },
+      { new: true }
+    );
+
+    updatedPost.user = post.user;
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post not found" });
     }
 
-    // Return the status of the service
-    res.status(200).json({
-      message: "User status fetched successfully.",
-      status: service.status,
-    });
+    res.json(updatedPost);
   } catch (error) {
-    console.error("Error fetching user status:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error unliking post:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while unliking the post" });
   }
 });
 
