@@ -923,6 +923,31 @@ app.put("/services/:id/disapprove", async (req, res) => {
   }
 });
 
+// Get the status of a specific user
+app.get("/user/:userId/status", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Find the service record(s) associated with the given user ID
+    const service = await Services.findOne({ user: userId });
+
+    if (!service) {
+      return res
+        .status(404)
+        .json({ message: "User not found or has no services." });
+    }
+
+    // Return the status of the service
+    res.status(200).json({
+      message: "User status fetched successfully.",
+      status: service.status,
+    });
+  } catch (error) {
+    console.error("Error fetching user status:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 // Endpoint to delete a service by ID
 app.delete("/delete-service/:id", async (req, res) => {
   try {
