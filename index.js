@@ -754,15 +754,6 @@ app.get("/get-posts", async (req, res) => {
       .json({ message: "An error occurred while getting the posts" });
   }
 });
-// Assuming you have a Notification model
-app.get("/notifications/:userId", async (req, res) => {
-  try {
-    const notifications = await Notification.find({ user: req.params.userId });
-    res.status(200).json(notifications);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch notifications" });
-  }
-});
 
 // Endpoint to create services
 app.post("/service_registration", async (req, res) => {
@@ -782,7 +773,7 @@ app.post("/service_registration", async (req, res) => {
       location,
       userId,
     } = req.body;
-
+    const status = "Not Approved";
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
@@ -809,6 +800,7 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
       wasteType,
       location,
+      status,
       user: userId, // Reference to the User model
     });
 
