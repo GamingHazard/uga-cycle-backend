@@ -344,30 +344,40 @@ const authenticateUser = (req, res, next) => {
   }
 };
 
-// DELETE endpoint to delete user account
-app.delete("/deleteUser", authenticateUser, async (req, res) => {
+// DELETE endpoint to delete admin account
+app.delete("/delete-admin/:userId", async (req, res) => {
   try {
-    const userId = req.user.id; // Get userId from authenticated user context
-    const { password } = req.body; // Get password from request body
+    const userId = req.params.userId; // Get userId from URL
+    const deleteUser = await Admin.findByIdAndDelete(userId);
 
-    // Find the user
-    const user = await User.findById(userId);
-    if (!user) {
+    if (!deleteUser) {
       return res
         .status(404)
         .json({ status: "fail", message: "User not found" });
     }
 
-    // Verify the password (ensure you have a method to compare passwords)
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
+    res
+      .status(200)
+      .json({ status: "success", message: "Account deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting user account", error);
+    res
+      .status(500)
+      .json({ status: "error", message: "Failed to delete account" });
+  }
+});
+// DELETE endpoint to delete user account
+app.delete("/deleteUser/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId; // Get userId from URL
+    const deleteUser = await User.findByIdAndDelete(userId);
+
+    if (!deleteUser) {
       return res
-        .status(401)
-        .json({ status: "fail", message: "Incorrect password" });
+        .status(404)
+        .json({ status: "fail", message: "User not found" });
     }
 
-    // If password is correct, delete the user
-    await User.findByIdAndDelete(userId);
     res
       .status(200)
       .json({ status: "success", message: "Account deleted successfully" });
@@ -379,6 +389,77 @@ app.delete("/deleteUser", authenticateUser, async (req, res) => {
   }
 });
 
+// Endpoint to update admin profile
+app.patch("/update-admin-profile/:userId", async (req, res) => {
+  const { name, email, phone, profilePicture } = req.body;
+  const userId = req.params.userId;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  try {
+    // Check if email or phone already exists for another user
+    if (email) {
+      const existingEmailUser = await Admin.findOne({
+        email,
+        _id: { $ne: userId },
+      });
+      if (existingEmailUser) {
+        return res.status(400).json({ error: "Email is already in use" });
+      }
+    }
+
+    if (phone) {
+      const existingPhoneUser = await Admin.findOne({
+        phone,
+        _id: { $ne: userId },
+      });
+      if (existingPhoneUser) {
+        return res
+          .status(400)
+          .json({ error: "Phone number is already in use" });
+      }
+    }
+
+    const updateFields = { name, email, phone };
+
+    // Upload the profile picture to Cloudinary if provided
+    if (profilePicture) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(
+          profilePicture,
+          {
+            folder: "profile_pictures", // Optional: specify folder
+          }
+        );
+        updateFields.profilePicture = uploadResponse.secure_url;
+      } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        return res
+          .status(500)
+          .json({ error: "Failed to upload profile picture" });
+      }
+    }
+
+    const updatedUser = await Admin.findByIdAndUpdate(userId, updateFields, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+// Endpoint to update user profile
 app.patch("/updateUser/:userId", async (req, res) => {
   const { name, email, phone, profilePicture } = req.body;
   const userId = req.params.userId;
@@ -448,6 +529,7 @@ app.patch("/updateUser/:userId", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 // Endpoint to update user profile picture
 app.patch("/updateProfilePicture/:userId", async (req, res) => {
   const userId = req.params.userId;
@@ -474,29 +556,6 @@ app.patch("/updateProfilePicture/:userId", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Error updating profile picture" });
-  }
-});
-
-// DELETE endpoint to delete user account
-app.delete("/deleteUser/:userId", async (req, res) => {
-  try {
-    const userId = req.params.userId; // Get userId from URL
-    const deleteUser = await User.findByIdAndDelete(userId);
-
-    if (!deleteUser) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "User not found" });
-    }
-
-    res
-      .status(200)
-      .json({ status: "success", message: "Account deleted successfully" });
-  } catch (error) {
-    console.log("Error deleting user account", error);
-    res
-      .status(500)
-      .json({ status: "error", message: "Failed to delete account" });
   }
 });
 
