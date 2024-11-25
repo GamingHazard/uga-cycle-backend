@@ -940,7 +940,7 @@ app.put("/services/:id/approve", async (req, res) => {
 });
 
 // Endpoint to unlike a post
-router.put("/services/:id/disapprove", async (req, res) => {
+app.put("/services/:id/disapprove", async (req, res) => {
   try {
     const { id } = req.params;
 
