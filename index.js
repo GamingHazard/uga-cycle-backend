@@ -772,6 +772,7 @@ app.post("/service_registration", async (req, res) => {
         pickupSchedule,
         wasteType,
         location,
+        status,
         userId,
       },
     });
@@ -785,25 +786,23 @@ app.post("/service_registration", async (req, res) => {
   }
 });
 
-// Endpoint to fetch all registered services
-app.get("/services", async (req, res) => {
+// Endpoint to fetch all services with status "notApproved"
+app.get("/services/not-approved", async (req, res) => {
   try {
-    // Fetch all services from the database
-    const services = await Services.find().populate(
-      "user",
-      "name email  profilePicture"
-    );
+    const services = await Services.find({
+      $or: [{ status: "Not Approved" }, { status: "" }],
+    }).populate("user", "name email profilePicture");
 
     // Check if services exist
     if (services.length === 0) {
       return res.status(404).json({
-        message: "No services found.",
+        message: "No unapproved services found.",
       });
     }
 
     // Response with the fetched services
     res.status(200).json({
-      message: "Services fetched successfully",
+      message: "Unapproved services fetched successfully",
       services: services.map((service) => ({
         id: service._id,
         company: service.company,
@@ -822,9 +821,54 @@ app.get("/services", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching services:", error); // Log the error for debugging
+    console.error("Error fetching unapproved services:", error); // Log the error for debugging
     res.status(500).json({
-      message: "Failed to fetch services",
+      message: "Failed to fetch unapproved services",
+      error: error.message,
+    });
+  }
+});
+
+// Endpoint to fetch only approved services
+app.get("/services/approved", async (req, res) => {
+  try {
+    // Fetch services with status "approved"
+    const approvedServices = await Services.find({
+      status: "Approved",
+    }).populate("user", "name email profilePicture");
+
+    // Check if any approved services exist
+    if (approvedServices.length === 0) {
+      return res.status(404).json({
+        message: "No approved services found.",
+      });
+    }
+
+    // Respond with the approved services
+    res.status(200).json({
+      message: "Approved services fetched successfully",
+      services: approvedServices.map((service) => ({
+        id: service._id,
+        company: service.company,
+        fullName: service.fullName,
+        email: service.email,
+        serviceType: service.serviceType,
+        phoneNumber: service.phoneNumber,
+        region: service.region,
+        district: service.district,
+        registrationType: service.registrationType,
+        pickupSchedule: service.pickupSchedule,
+        wasteType: service.wasteType,
+        location: service.location,
+        status: service.status,
+        userId: service.user,
+        date: service.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching approved services:", error); // Log error for debugging
+    res.status(500).json({
+      message: "Failed to fetch approved services",
       error: error.message,
     });
   }
@@ -838,7 +882,7 @@ app.put("/services/:id/approve", async (req, res) => {
     // Find the service by ID and update its status to "approved"
     const updatedService = await Services.findByIdAndUpdate(
       id,
-      { status: "approved" },
+      { status: "Approved" },
       { new: true } // Return the updated document
     );
 
@@ -846,47 +890,36 @@ app.put("/services/:id/approve", async (req, res) => {
       return res.status(404).json({ message: "Service not found" });
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Service approved successfully",
-        service: updatedService,
-      });
+    res.status(200).json({
+      message: "Service approved successfully",
+      service: updatedService,
+    });
   } catch (error) {
     console.error("Error approving service:", error);
     res.status(500).json({ message: "Failed to approve service" });
   }
 });
 
-// Endpoint to unlike a post
-app.put("/services/:postId/:userId/disapprove", async (req, res) => {
-  const postId = req.params.postId;
-  const userId = req.params.userId;
-
+app.put("/services/:id/disapprove", async (req, res) => {
   try {
-    const post = await Services.findById(postId).populate(
-      "user",
-      "name  profilePicture"
+    const { id } = req.params;
+
+    // Update the status to "notApproved"
+    const service = await Services.findByIdAndUpdate(
+      id,
+      { status: "Not Approved" },
+      { new: true } // Return the updated document
     );
 
-    const updatedPost = await Services.findByIdAndUpdate(
-      postId,
-      { $pull: { approval: userId } },
-      { new: true }
-    );
-
-    updatedPost.user = post.user;
-
-    if (!updatedPost) {
-      return res.status(404).json({ message: "Post not found" });
+    // Check if the service exists
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
     }
 
-    res.json(updatedPost);
+    res.json({ message: "Service disapproved successfully", service });
   } catch (error) {
-    console.error("Error unliking post:", error);
-    res
-      .status(500)
-      .json({ message: "An error occurred while unliking the post" });
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
