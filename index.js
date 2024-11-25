@@ -919,65 +919,47 @@ app.get("/services/not-approved", async (req, res) => {
 });
 
 // Endpoint for approving a user
-app.put("/services/:postId/:userId/approve", async (req, res) => {
-  const postId = req.params.postId;
-  const userId = req.params.userId;
-
+app.put("/services/:id/approve", async (req, res) => {
   try {
-    const post = await Services.findById(postId).populate(
-      "user",
-      "name  profilePicture"
-    );
-
-    const updatedPost = await Services.findByIdAndUpdate(
-      postId,
-      { $addToSet: { approval: userId } },
+    const { id } = req.params;
+    const service = await Services.findByIdAndUpdate(
+      id,
+      { status: "Approved" },
       { new: true }
     );
 
-    if (!updatedPost) {
-      return res.status(404).json({ message: "Post not found" });
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
     }
-    updatedPost.user = post.user;
 
-    res.json(updatedPost);
+    res.json({ message: "Service approved successfully", service });
   } catch (error) {
-    console.error("Error liking post:", error);
-    res
-      .status(500)
-      .json({ message: "An error occurred while liking the post" });
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // Endpoint to unlike a post
-app.put("/services/:postId/:userId/disapprove", async (req, res) => {
-  const postId = req.params.postId;
-  const userId = req.params.userId;
-
+router.put("/services/:id/disapprove", async (req, res) => {
   try {
-    const post = await Services.findById(postId).populate(
-      "user",
-      "name  profilePicture"
+    const { id } = req.params;
+
+    // Update the status to "notApproved"
+    const service = await Services.findByIdAndUpdate(
+      id,
+      { status: "Not Approved" },
+      { new: true } // Return the updated document
     );
 
-    const updatedPost = await Services.findByIdAndUpdate(
-      postId,
-      { $pull: { approval: userId } },
-      { new: true }
-    );
-
-    updatedPost.user = post.user;
-
-    if (!updatedPost) {
-      return res.status(404).json({ message: "Post not found" });
+    // Check if the service exists
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
     }
 
-    res.json(updatedPost);
+    res.json({ message: "Service disapproved successfully", service });
   } catch (error) {
-    console.error("Error unliking post:", error);
-    res
-      .status(500)
-      .json({ message: "An error occurred while unliking the post" });
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
