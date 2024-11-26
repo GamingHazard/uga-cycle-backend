@@ -723,7 +723,8 @@ app.post("/service_registration", async (req, res) => {
       userId,
     } = req.body;
 
-    status = "Not Approved";
+    // Change 'status' to 'let' so that its value can be reassigned
+    let status = "Not Approved"; // Now it's mutable
 
     // Ensure the location is in the correct format ([longitude, latitude])
     if (location && location.latitude && location.longitude) {
