@@ -723,9 +723,6 @@ app.post("/service_registration", async (req, res) => {
       userId,
     } = req.body;
 
-    // Change 'status' to 'let' so that its value can be reassigned
-    const status = "Not Approved"; // Now it's mutable
-
     // Ensure the location is in the correct format ([longitude, latitude])
     if (location && location.latitude && location.longitude) {
       // Convert the location object to an array [longitude, latitude]
@@ -763,7 +760,7 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
       wasteType,
       location,
-      status,
+
       user: userId, // Reference to the User model
     });
 
@@ -786,7 +783,7 @@ app.post("/service_registration", async (req, res) => {
         pickupSchedule,
         wasteType,
         location,
-        status,
+
         userId,
       },
     });
@@ -982,7 +979,7 @@ app.put("/services/:id/approve", async (req, res) => {
     const { id } = req.params;
     const service = await Services.findByIdAndUpdate(
       id,
-      { status: "Approved" },
+      { status: "" },
       { new: true }
     );
 
