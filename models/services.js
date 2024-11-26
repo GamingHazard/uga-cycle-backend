@@ -1,38 +1,34 @@
 const mongoose = require("mongoose");
 
 const ServiceSchema = new mongoose.Schema({
-  fullName: { type: String, required: true }, // Full name of the user
-  email: { type: String, required: true, unique: true }, // Full name of the user
-  company: { type: String, required: true }, // Full name of the user
-  phoneNumber: { type: String, required: true }, // User's phone number
-  serviceType: { type: String, required: true }, // User's selected region
-  region: { type: String, required: true }, // User's selected region
-  district: { type: String, required: true }, // User's selected district
-  registrationType: { type: String, required: true }, // User's selected registration type
-  pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
-  wasteType: { type: String, required: true }, // User's selected pickup schedule
+  fullName: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  company: { type: String, required: true },
+  phoneNumber: { type: String, required: true },
+  serviceType: { type: String, required: true },
+  region: { type: String, required: true },
+  district: { type: String, required: true },
+  registrationType: { type: String, required: true },
+  pickupSchedule: { type: String, required: true },
+  wasteType: { type: String, required: true },
+
+  // Modified location field (coordinates as an array)
   location: {
-    type: {
-      type: String, // GeoJSON type
-      enum: ["Point"], // Only 'Point' is supported
-      required: true,
-    },
-    coordinates: {
-      type: [Number], // Array of numbers [longitude, latitude]
-      required: true,
-    },
+    type: [Number], // Array of numbers [longitude, latitude]
   },
+
   status: { type: String, default: "" },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+
   createdAt: {
     type: Date,
-    default: Date.now, // Timestamp of when the service was created
+    default: Date.now,
   },
 });
 
 // Add a 2dsphere index for location
 ServiceSchema.index({ location: "2dsphere" });
 
-const Services = mongoose.model("Services", ServiceSchema); // Change model name to 'Service'
+const Services = mongoose.model("Services", ServiceSchema);
 
 module.exports = Services;

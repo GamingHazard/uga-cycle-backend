@@ -719,13 +719,10 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location, // GeoJSON location object { type: "Point", coordinates: [longitude, latitude] }
+      location,
       userId,
     } = req.body;
-
-    // Set initial status
-    const status = "Not Approved";
-
+    status = "Not Approved";
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
@@ -739,20 +736,7 @@ app.post("/service_registration", async (req, res) => {
       });
     }
 
-    // Step 2: Ensure that the location is provided in the correct GeoJSON format
-    if (
-      !location ||
-      location.type !== "Point" ||
-      !Array.isArray(location.coordinates) ||
-      location.coordinates.length !== 2
-    ) {
-      return res.status(400).json({
-        message:
-          "Invalid location format. Please provide a valid GeoJSON 'Point' with [longitude, latitude].",
-      });
-    }
-
-    // Step 3: Create a new service entry with the extracted data
+    // Step 2: Create a new service entry with the extracted data
     const newService = new Services({
       company,
       fullName,
@@ -764,12 +748,12 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location, // Save the GeoJSON location
+      location,
       status,
       user: userId, // Reference to the User model
     });
 
-    // Step 4: Save the new service entry to the database
+    // Step 3: Save the new service entry to the database
     await newService.save();
 
     // Response after successful service registration
@@ -787,7 +771,7 @@ app.post("/service_registration", async (req, res) => {
         registrationType,
         pickupSchedule,
         wasteType,
-        location, // Include the location with coordinates
+        location,
         status,
         userId,
       },
@@ -847,33 +831,13 @@ app.get("/services", async (req, res) => {
   }
 });
 
-// Endpoint to fetch only approved services with optional location query
+// Endpoint to fetch only approved services
 app.get("/services/approved", async (req, res) => {
   try {
-    // Extract query parameters
-    const { longitude, latitude, radius } = req.query;
-
-    // Build the base query for approved services
-    let query = { status: "Approved" };
-
-    // Add geospatial filter if location parameters are provided
-    if (longitude && latitude && radius) {
-      const radiusInRadians = radius / 6378.1; // Convert radius from kilometers to radians
-      query.location = {
-        $geoWithin: {
-          $centerSphere: [
-            [parseFloat(longitude), parseFloat(latitude)],
-            radiusInRadians,
-          ],
-        },
-      };
-    }
-
-    // Fetch the approved services matching the query
-    const approvedServices = await Services.find(query).populate(
-      "user",
-      "name email profilePicture"
-    );
+    // Fetch services with status "approved"
+    const approvedServices = await Services.find({
+      status: "Approved",
+    }).populate("user", "name email profilePicture");
 
     // Check if any approved services exist
     if (approvedServices.length === 0) {
@@ -911,45 +875,26 @@ app.get("/services/approved", async (req, res) => {
   }
 });
 
-// Endpoint to fetch only approved services with optional location query
+// Endpoint to fetch all services with status "notApproved"
 app.get("/services/not-approved", async (req, res) => {
   try {
-    // Extract query parameters
-    const { longitude, latitude, radius } = req.query;
-
-    // Build the base query for approved services
-    let query = { status: "Not Approved" };
-
-    // Add geospatial filter if location parameters are provided
-    if (longitude && latitude && radius) {
-      const radiusInRadians = radius / 6378.1; // Convert radius from kilometers to radians
-      query.location = {
-        $geoWithin: {
-          $centerSphere: [
-            [parseFloat(longitude), parseFloat(latitude)],
-            radiusInRadians,
-          ],
-        },
-      };
-    }
-
-    // Fetch the approved services matching the query
-    const approvedServices = await Services.find(query).populate(
+    // Fetch all services with status "notApproved"
+    const services = await Services.find({ status: "Not Approved" }).populate(
       "user",
       "name email profilePicture"
     );
 
-    // Check if any approved services exist
-    if (approvedServices.length === 0) {
+    // Check if services exist
+    if (services.length === 0) {
       return res.status(404).json({
-        message: "No approved services found.",
+        message: "No unapproved Customers found.",
       });
     }
 
-    // Respond with the approved services
+    // Response with the fetched services
     res.status(200).json({
-      message: "Approved services fetched successfully",
-      services: approvedServices.map((service) => ({
+      message: "Unapproved services fetched successfully",
+      services: services.map((service) => ({
         id: service._id,
         company: service.company,
         fullName: service.fullName,
@@ -967,9 +912,9 @@ app.get("/services/not-approved", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching approved services:", error); // Log error for debugging
+    console.error("Error fetching unapproved services:", error); // Log the error for debugging
     res.status(500).json({
-      message: "Failed to fetch approved services",
+      message: "Failed to fetch unapproved services",
       error: error.message,
     });
   }
