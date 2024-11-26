@@ -719,10 +719,13 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location,
+      location, // GeoJSON location object { type: "Point", coordinates: [longitude, latitude] }
       userId,
     } = req.body;
-    status = "Not Approved";
+
+    // Set initial status
+    const status = "Not Approved";
+
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
@@ -736,7 +739,20 @@ app.post("/service_registration", async (req, res) => {
       });
     }
 
-    // Step 2: Create a new service entry with the extracted data
+    // Step 2: Ensure that the location is provided in the correct GeoJSON format
+    if (
+      !location ||
+      location.type !== "Point" ||
+      !Array.isArray(location.coordinates) ||
+      location.coordinates.length !== 2
+    ) {
+      return res.status(400).json({
+        message:
+          "Invalid location format. Please provide a valid GeoJSON 'Point' with [longitude, latitude].",
+      });
+    }
+
+    // Step 3: Create a new service entry with the extracted data
     const newService = new Services({
       company,
       fullName,
@@ -748,12 +764,12 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location,
+      location, // Save the GeoJSON location
       status,
       user: userId, // Reference to the User model
     });
 
-    // Step 3: Save the new service entry to the database
+    // Step 4: Save the new service entry to the database
     await newService.save();
 
     // Response after successful service registration
@@ -771,7 +787,7 @@ app.post("/service_registration", async (req, res) => {
         registrationType,
         pickupSchedule,
         wasteType,
-        location,
+        location, // Include the location with coordinates
         status,
         userId,
       },
