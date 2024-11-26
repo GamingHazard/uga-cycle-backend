@@ -12,20 +12,18 @@ const ServiceSchema = new mongoose.Schema({
   pickupSchedule: { type: String, required: true },
   wasteType: { type: String, required: true },
   status: { type: String, default: "" },
-  // Modified location field (coordinates as an array)
   location: {
-    type: [Object], // Array of numbers [longitude, latitude]
+    latitude: { type: Number },
+    longitude: { type: Number },
   },
-
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
 
-// Add a 2dsphere index for location
+// Add a 2dsphere index for the location field to enable geospatial queries
 ServiceSchema.index({ location: "2dsphere" });
 
 const Services = mongoose.model("Services", ServiceSchema);

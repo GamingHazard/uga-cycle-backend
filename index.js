@@ -719,10 +719,11 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location,
+      latitude,
+      longitude,
       userId,
     } = req.body;
-
+    const status = "Not Approved";
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
@@ -748,8 +749,8 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location,
-
+      location: { latitude, longitude },
+      status,
       user: userId, // Reference to the User model
     });
 
