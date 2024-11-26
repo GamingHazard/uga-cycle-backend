@@ -11,13 +11,12 @@ const ServiceSchema = new mongoose.Schema({
   registrationType: { type: String, required: true },
   pickupSchedule: { type: String, required: true },
   wasteType: { type: String, required: true },
-
+  status: { type: String, default: "" },
   // Modified location field (coordinates as an array)
   location: {
     type: [Number], // Array of numbers [longitude, latitude]
   },
 
-  status: { type: String, default: "" },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
   createdAt: {
