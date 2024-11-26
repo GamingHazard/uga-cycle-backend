@@ -14,7 +14,7 @@ const ServiceSchema = new mongoose.Schema({
   status: { type: String, default: "" },
   // Modified location field (coordinates as an array)
   location: {
-    type: [Number], // Array of numbers [longitude, latitude]
+    type: [], // Array of numbers [longitude, latitude]
   },
 
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
