@@ -722,7 +722,7 @@ app.post("/service_registration", async (req, res) => {
       location,
       userId,
     } = req.body;
-
+    status = "Not Approved";
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
@@ -749,6 +749,7 @@ app.post("/service_registration", async (req, res) => {
       pickupSchedule,
       wasteType,
       location,
+      status,
       user: userId, // Reference to the User model
     });
 
@@ -771,6 +772,7 @@ app.post("/service_registration", async (req, res) => {
         pickupSchedule,
         wasteType,
         location,
+        status,
         userId,
       },
     });
@@ -885,7 +887,7 @@ app.get("/services/not-approved", async (req, res) => {
     // Check if services exist
     if (services.length === 0) {
       return res.status(404).json({
-        message: "No unapproved services found.",
+        message: "No unapproved Customers found.",
       });
     }
 
