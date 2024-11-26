@@ -723,17 +723,6 @@ app.post("/service_registration", async (req, res) => {
       userId,
     } = req.body;
 
-    // Ensure the location is in the correct format ([longitude, latitude])
-    if (location && location.latitude && location.longitude) {
-      // Convert the location object to an array [longitude, latitude]
-      const location = [location.longitude, location.latitude];
-    } else {
-      // If the location is not in the correct format, return an error
-      return res.status(400).json({
-        message: "Invalid location format. Expected { latitude, longitude }.",
-      });
-    }
-
     // Step 1: Check if the user is already registered under the same company
     const existingService = await Services.findOne({
       user: userId,
