@@ -11,15 +11,27 @@ const ServiceSchema = new mongoose.Schema({
   registrationType: { type: String, required: true }, // User's selected registration type
   pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
   wasteType: { type: String, required: true }, // User's selected pickup schedule
-  location: { type: String, default: "" }, // User's selected pickup schedule
-  status: { type: {} },
+  location: {
+    type: {
+      type: String, // GeoJSON type
+      enum: ["Point"], // Only 'Point' is supported
+      required: true,
+    },
+    coordinates: {
+      type: [Number], // Array of numbers [longitude, latitude]
+      required: true,
+    },
+  },
+  status: { type: String, default: "" },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
-
   createdAt: {
     type: Date,
     default: Date.now, // Timestamp of when the service was created
   },
 });
+
+// Add a 2dsphere index for location
+ServiceSchema.index({ location: "2dsphere" });
 
 const Services = mongoose.model("Services", ServiceSchema); // Change model name to 'Service'
 
