@@ -719,8 +719,7 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      latitude,
-      longitude,
+      location,
       userId,
     } = req.body;
     const status = "Not Approved";
@@ -749,7 +748,7 @@ app.post("/service_registration", async (req, res) => {
       registrationType,
       pickupSchedule,
       wasteType,
-      location: { latitude, longitude },
+      location,
       status,
       user: userId, // Reference to the User model
     });
