@@ -831,13 +831,33 @@ app.get("/services", async (req, res) => {
   }
 });
 
-// Endpoint to fetch only approved services
+// Endpoint to fetch only approved services with optional location query
 app.get("/services/approved", async (req, res) => {
   try {
-    // Fetch services with status "approved"
-    const approvedServices = await Services.find({
-      status: "Approved",
-    }).populate("user", "name email profilePicture");
+    // Extract query parameters
+    const { longitude, latitude, radius } = req.query;
+
+    // Build the base query for approved services
+    let query = { status: "Approved" };
+
+    // Add geospatial filter if location parameters are provided
+    if (longitude && latitude && radius) {
+      const radiusInRadians = radius / 6378.1; // Convert radius from kilometers to radians
+      query.location = {
+        $geoWithin: {
+          $centerSphere: [
+            [parseFloat(longitude), parseFloat(latitude)],
+            radiusInRadians,
+          ],
+        },
+      };
+    }
+
+    // Fetch the approved services matching the query
+    const approvedServices = await Services.find(query).populate(
+      "user",
+      "name email profilePicture"
+    );
 
     // Check if any approved services exist
     if (approvedServices.length === 0) {
@@ -875,26 +895,45 @@ app.get("/services/approved", async (req, res) => {
   }
 });
 
-// Endpoint to fetch all services with status "notApproved"
+// Endpoint to fetch only approved services with optional location query
 app.get("/services/not-approved", async (req, res) => {
   try {
-    // Fetch all services with status "notApproved"
-    const services = await Services.find({ status: "Not Approved" }).populate(
+    // Extract query parameters
+    const { longitude, latitude, radius } = req.query;
+
+    // Build the base query for approved services
+    let query = { status: "Not Approved" };
+
+    // Add geospatial filter if location parameters are provided
+    if (longitude && latitude && radius) {
+      const radiusInRadians = radius / 6378.1; // Convert radius from kilometers to radians
+      query.location = {
+        $geoWithin: {
+          $centerSphere: [
+            [parseFloat(longitude), parseFloat(latitude)],
+            radiusInRadians,
+          ],
+        },
+      };
+    }
+
+    // Fetch the approved services matching the query
+    const approvedServices = await Services.find(query).populate(
       "user",
       "name email profilePicture"
     );
 
-    // Check if services exist
-    if (services.length === 0) {
+    // Check if any approved services exist
+    if (approvedServices.length === 0) {
       return res.status(404).json({
-        message: "No unapproved Customers found.",
+        message: "No approved services found.",
       });
     }
 
-    // Response with the fetched services
+    // Respond with the approved services
     res.status(200).json({
-      message: "Unapproved services fetched successfully",
-      services: services.map((service) => ({
+      message: "Approved services fetched successfully",
+      services: approvedServices.map((service) => ({
         id: service._id,
         company: service.company,
         fullName: service.fullName,
@@ -912,9 +951,9 @@ app.get("/services/not-approved", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching unapproved services:", error); // Log the error for debugging
+    console.error("Error fetching approved services:", error); // Log error for debugging
     res.status(500).json({
-      message: "Failed to fetch unapproved services",
+      message: "Failed to fetch approved services",
       error: error.message,
     });
   }
