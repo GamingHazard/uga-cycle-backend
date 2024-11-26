@@ -11,7 +11,7 @@ const ServiceSchema = new mongoose.Schema({
   registrationType: { type: String, required: true }, // User's selected registration type
   pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
   wasteType: { type: String, required: true }, // User's selected pickup schedule
-  location: { type: String }, // User's selected pickup schedule
+  location: { type: String, default: "" }, // User's selected pickup schedule
   status: { type: String, default: "" },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
 
