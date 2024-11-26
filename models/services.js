@@ -12,7 +12,7 @@ const ServiceSchema = new mongoose.Schema({
   pickupSchedule: { type: String, required: true }, // User's selected pickup schedule
   wasteType: { type: String, required: true }, // User's selected pickup schedule
   location: { type: String, default: "" }, // User's selected pickup schedule
-  status: { type: String, default: "" },
+  status: { type: {} },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Reference to the user
 
   createdAt: {
