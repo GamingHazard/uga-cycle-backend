@@ -726,7 +726,7 @@ app.post("/service_registration", async (req, res) => {
     // Ensure the location is in the correct format ([longitude, latitude])
     if (location && location.latitude && location.longitude) {
       // Convert the location object to an array [longitude, latitude]
-      location = [location.longitude, location.latitude];
+      const location = [location.longitude, location.latitude];
     } else {
       // If the location is not in the correct format, return an error
       return res.status(400).json({
