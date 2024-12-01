@@ -842,7 +842,7 @@ app.get("/services/approved", async (req, res) => {
     // Check if any approved services exist
     if (approvedServices.length === 0) {
       return res.status(404).json({
-        message: "No approved services found.",
+        message: "No approved Customers.",
       });
     }
 
