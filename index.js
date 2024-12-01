@@ -968,7 +968,7 @@ app.put("/services/:id/approve", async (req, res) => {
     const { id } = req.params;
     const service = await Services.findByIdAndUpdate(
       id,
-      { status: "Not Approved" },
+      { status: "Approved" },
       { new: true }
     );
 
@@ -991,7 +991,7 @@ app.put("/services/:id/disapprove", async (req, res) => {
     // Update the status to "notApproved"
     const service = await Services.findByIdAndUpdate(
       id,
-      { status: "Approved" },
+      { status: "Not Approved" },
       { new: true } // Return the updated document
     );
 
