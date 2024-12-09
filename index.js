@@ -877,7 +877,7 @@ app.get("/services/not-approved", async (req, res) => {
   }
 });
 
-app.get("/user/:userId/status", async (req, res) => {
+app.get("/service/:userId", async (req, res) => {
   const { userId } = req.params;
 
   // Validate the userId
