@@ -121,7 +121,6 @@ app.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
-      role,
       name,
       email,
       phone,
@@ -140,7 +139,7 @@ app.post("/register", async (req, res) => {
     // Return all user details including user ID and token
     const userDetails = {
       id: newUser._id,
-      role: newUser.role,
+
       name: newUser.name,
       email: newUser.email,
       phone: newUser.phone,
