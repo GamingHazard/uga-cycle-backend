@@ -110,7 +110,7 @@ app.post("/admin-register", async (req, res) => {
 // Endpoint to register a user
 app.post("/register", async (req, res) => {
   try {
-    const { role, name, email, phone, password } = req.body;
+    const { name, email, phone, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
