@@ -927,6 +927,47 @@ app.get("/user/:userId/status", async (req, res) => {
     });
   }
 });
+app.get("/user/:userId/status", async (req, res) => {
+  const { userId } = req.params;
+
+  // Validate the userId
+  if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
+    return res.status(400).json({
+      message: "Invalid user ID format.",
+    });
+  }
+
+  try {
+    // Find the service record(s) associated with the given user ID
+    const service = await Services.findOne({ user: userId });
+
+    if (!service) {
+      return res
+        .status(404)
+        .json({ message: "User not found or has no associated services." });
+    }
+
+    // Return the status of the service
+    res.status(200).json({
+      message: "User status fetched successfully.",
+      status: service.status,
+    });
+  } catch (error) {
+    console.error("Error fetching user status:", error.message);
+
+    // Check for specific database errors
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid user ID format in the database query.",
+      });
+    }
+
+    // Fallback for other unexpected errors
+    res.status(500).json({
+      message: "An unexpected error occurred. Please try again later.",
+    });
+  }
+});
 
 // Endpoint for approving a user
 app.put("/services/:id/approve", async (req, res) => {
