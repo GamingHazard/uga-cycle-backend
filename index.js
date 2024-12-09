@@ -6,16 +6,10 @@ const bcrypt = require("bcrypt"); // Import bcrypt
 const nodemailer = require("nodemailer");
 const ws = require("ws");
 require("dotenv").config();
-const cloudinary = require("./cloudinary");
 
 const app = express();
-
+const port = 3000;
 const cors = require("cors");
-
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -33,7 +27,6 @@ mongoose
   .catch((err) => {
     console.log("Error Connecting to MongoDB");
   });
-
 // Create the HTTP server
 const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
