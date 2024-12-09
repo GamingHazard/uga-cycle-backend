@@ -900,8 +900,8 @@ app.get("/service/:userId", async (req, res) => {
     // Return the status of the service
     res.status(200).json({
       message: "User status fetched successfully.",
-      Names: service.fullName,
-      Email: service.email,
+      fullName: service.fullName,
+      email: service.email,
       phoneNumber: service.phoneNumber,
       serviceType: service.serviceType,
       wasteType: service.wasteType,
