@@ -4,39 +4,13 @@ const mongoose = require("mongoose");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt"); // Import bcrypt
 const nodemailer = require("nodemailer");
-const WebSocket = require("ws");
+const ws = require("ws");
 require("dotenv").config();
-const multer = require("multer");
 const cloudinary = require("./cloudinary");
-const streamifier = require("streamifier");
+
 const app = express();
-const port = 3000;
+
 const cors = require("cors");
-const http = require("http");
-const wsProtocol = process.env.NODE_ENV === "production" ? "wss" : "ws";
-const wsPort = process.env.PORT || 8080; // Use your app's port or default to 8080
-const wsUrl = `${wsProtocol}://uga-cycle-backend-1.onrender.com:${wsPort}`;
-const server = http.createServer(app); // Define the HTTP server instance
-
-const wss = new WebSocket.Server({ server });
-
-wss.on("connection", (ws) => {
-  console.log("Client connected");
-
-  ws.on("message", (message) => {
-    console.log(`Received: ${message}`);
-    // You can broadcast the message to all connected clients
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  });
-
-  ws.on("close", () => {
-    console.log("Client disconnected");
-  });
-});
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
@@ -60,12 +34,27 @@ mongoose
     console.log("Error Connecting to MongoDB");
   });
 
-// Configure multer to accept image files
-const storage = multer.memoryStorage(); // Store files in memory
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-}); // Limit file size to 5MB
+// Create the HTTP server
+const server = app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+// Create the WebSocket server
+const wss = new ws.Server({ server });
+
+// WebSocket connection handling
+wss.on("connection", (ws) => {
+  console.log("Client connected");
+
+  ws.on("message", (message) => {
+    console.log("Received:", message);
+    // Handle incoming messages and broadcast them if necessary
+  });
+
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
+});
 
 const User = require("./models/user");
 const Admin = require("./models/admins");
@@ -642,22 +631,6 @@ app.get("/get-SalePosts", async (req, res) => {
       .json({ message: "An error occurred while getting the Sale posts" });
   }
 });
-// Endpoint to get user profile
-app.get("/profile/:userId", async (req, res) => {
-  try {
-    const userId = req.params.userId;
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({ user });
-  } catch (error) {
-    res.status(500).json({ message: "Error while getting the profile" });
-  }
-});
 
 // Endpoint to create a new post
 app.post("/create-post", async (req, res) => {
@@ -692,15 +665,6 @@ app.get("/get-posts", async (req, res) => {
     res
       .status(500)
       .json({ message: "An error occurred while getting the posts" });
-  }
-});
-// Assuming you have a Notification model
-app.get("/notifications/:userId", async (req, res) => {
-  try {
-    const notifications = await Notification.find({ user: req.params.userId });
-    res.status(200).json(notifications);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch notifications" });
   }
 });
 
@@ -943,6 +907,15 @@ app.get("/user/:userId/status", async (req, res) => {
     // Return the status of the service
     res.status(200).json({
       message: "User status fetched successfully.",
+      Names: service.fullName,
+      Email: service.email,
+      phoneNumber: service.phoneNumber,
+      serviceType: service.serviceType,
+      wasteType: service.wasteType,
+      region: service.region,
+      district: service.district,
+      registrationType: service.registrationType,
+      pickupSchedule: service.pickupSchedule,
       status: service.status,
     });
   } catch (error) {
