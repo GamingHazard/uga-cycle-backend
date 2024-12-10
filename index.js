@@ -926,11 +926,11 @@ app.get("/service/:userId", async (req, res) => {
     });
   }
 });
-app.get("/user/:id/status", async (req, res) => {
-  const { id } = req.params;
+app.get("/user/:userId/status", async (req, res) => {
+  const { userId } = req.params;
 
-  // Validate the Id
-  if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+  // Validate the userId
+  if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
     return res.status(400).json({
       message: "Invalid user ID format.",
     });
@@ -938,7 +938,7 @@ app.get("/user/:id/status", async (req, res) => {
 
   try {
     // Find the service record(s) associated with the given user ID
-    const service = await Services.findOne(id);
+    const service = await Services.findOne({ user: userId });
 
     if (!service) {
       return res
