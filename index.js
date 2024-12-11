@@ -1212,8 +1212,7 @@ app.patch("/change-password/:id", async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      message:
-        "Password updated successfully. Please use your new password for future logins.",
+      message: "Password changed successfully.",
     });
   } catch (error) {
     console.error("Error updating password:", error);
