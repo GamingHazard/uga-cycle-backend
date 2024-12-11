@@ -1221,3 +1221,34 @@ app.patch("/change-password/:id", async (req, res) => {
       .json({ message: "Password update failed due to a server error." });
   }
 });
+
+//  Endpoint for Users Login
+app.post("/reset-password-request", async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    // Find user by email or phone
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { phone: identifier }],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    // Respond with the token and user information including user ID
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        role: user.role,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        phone: user.phone,
+      },
+    });
+  } catch (error) {
+    console.error("Error during login", error);
+    res.status(500).json({ message: "Login failed" });
+  }
+});
