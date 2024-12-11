@@ -1162,14 +1162,6 @@ app.post("/user-password/:id", async (req, res) => {
         message: "Invalid password. Please check and try again.",
       });
     }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET || "your_secret_key_here", // Use env variable
-      { expiresIn: "1d" }
-    );
-
     // Respond with token and user info
     res.status(200).json({
       token,
@@ -1185,5 +1177,48 @@ app.post("/user-password/:id", async (req, res) => {
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ message: "Login failed due to a server error." });
+  }
+});
+
+// endpoint for updating user password
+app.patch("/change-password/:id", async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const { id } = req.params;
+
+    // Find user by ID
+    const user = await User.findById(id); // Assuming _id is used as the primary key
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Validate the current password
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Invalid current password. Please check and try again.",
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password in the database
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      message:
+        "Password updated successfully. Please use your new password for future logins.",
+    });
+  } catch (error) {
+    console.error("Error updating password:", error);
+    res
+      .status(500)
+      .json({ message: "Password update failed due to a server error." });
   }
 });
