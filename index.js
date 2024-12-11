@@ -728,7 +728,6 @@ app.post("/service_registration", async (req, res) => {
         pickupSchedule,
         wasteType,
         location,
-
         userId,
       },
     });
@@ -1140,5 +1139,49 @@ app.put("/tips/:postId/:userId/unlike", async (req, res) => {
     res
       .status(500)
       .json({ message: "An error occurred while unliking the post" });
+  }
+});
+
+//  Endpoint for Users Login
+app.post("/user-password/:Id", async (req, res) => {
+  try {
+    const { password } = req.body;
+    const { Id } = req.params;
+
+    // Find user by email or phone
+    const user = await User.findOne({ user: Id });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the password matches
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Wrong password, check your password and try again",
+      });
+    }
+
+    // Generate JWT token with a secret key
+    const token = jwt.sign({ userId: user._id }, "your_secret_key_here", {
+      expiresIn: "1d",
+    });
+
+    // Respond with the token and user information including user ID
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        role: user.role,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        phone: user.phone,
+      },
+    });
+  } catch (error) {
+    console.error("Error during login", error);
+    res.status(500).json({ message: "Login failed" });
   }
 });
