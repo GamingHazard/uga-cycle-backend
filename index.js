@@ -1237,7 +1237,6 @@ app.post("/reset-password-request", async (req, res) => {
     }
     // Respond with the token and user information including user ID
     res.status(200).json({
-      token,
       user: {
         id: user._id,
         role: user.role,
@@ -1245,6 +1244,7 @@ app.post("/reset-password-request", async (req, res) => {
         email: user.email,
         profilePicture: user.profilePicture,
         phone: user.phone,
+        token: user.verificationToken,
       },
     });
   } catch (error) {
