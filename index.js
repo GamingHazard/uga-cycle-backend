@@ -1142,33 +1142,35 @@ app.put("/tips/:postId/:userId/unlike", async (req, res) => {
   }
 });
 
-//  Endpoint for Users Login
-app.post("/user-password/:Id", async (req, res) => {
+// Endpoint for User password
+app.post("/user-password/:id", async (req, res) => {
   try {
     const { password } = req.body;
-    const { Id } = req.params;
+    const { id } = req.params;
 
-    // Find user by email or phone
-    const user = await User.findOne({ user: Id });
+    // Find user by ID
+    const user = await User.findById(id); // Assuming _id is used as the primary key
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if the password matches
+    // Validate the password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
-        message: "Wrong password, check your password and try again",
+        message: "Invalid password. Please check and try again.",
       });
     }
 
-    // Generate JWT token with a secret key
-    const token = jwt.sign({ userId: user._id }, "your_secret_key_here", {
-      expiresIn: "1d",
-    });
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET || "your_secret_key_here", // Use env variable
+      { expiresIn: "1d" }
+    );
 
-    // Respond with the token and user information including user ID
+    // Respond with token and user info
     res.status(200).json({
       token,
       user: {
@@ -1181,7 +1183,7 @@ app.post("/user-password/:Id", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error during login", error);
-    res.status(500).json({ message: "Login failed" });
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Login failed due to a server error." });
   }
 });
