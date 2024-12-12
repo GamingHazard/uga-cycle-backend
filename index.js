@@ -1255,7 +1255,7 @@ app.post("/reset-password-request", async (req, res) => {
 // endpoint for updating user password
 app.patch("/reset-password/:id", async (req, res) => {
   try {
-    const { newPassword } = req.body;
+    const newPassword = req.body;
     const { id } = req.params;
 
     // Find user by ID
