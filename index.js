@@ -1252,3 +1252,33 @@ app.post("/reset-password-request", async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 });
+// endpoint for updating user password
+app.patch("/reset-password/:id", async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const { id } = req.params;
+
+    // Find user by ID
+    const user = await User.findById(id); // Assuming _id is used as the primary key
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password in the database
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      message: "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error("Error updating password:", error);
+    res
+      .status(500)
+      .json({ message: "Password update failed due to a server error." });
+  }
+});
